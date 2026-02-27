@@ -8,30 +8,19 @@ A lightweight web app for creating signup events and claiming volunteer slots.
 - Public page only shows volunteer display names as **first initial + last name**.
 - Organizer page shows full details: first name, last name, email, phone, and notes.
 
-## Shared data storage (multi-user)
-- Events and signups are saved to `data/events.json` via `GET/PUT /api/events`.
-- This means all users see the same events/signups when using the Node server.
-- Browser-only static hosting will not provide shared storage.
-
 ## Features
 - Create events with title, date, description, and multiple slots.
 - Collect volunteer first name, last name, email, phone, and optional notes.
 - Keep public identity limited to `F. Lastname` while preserving full organizer visibility.
-- Organizer can remove an event.
+- Data persists in browser `localStorage`.
 
-## Run with shared storage (recommended)
+## Run locally
 ```bash
-npm start
+python3 -m http.server 8000
 ```
 Then open:
 - Public signup page: <http://localhost:8000/index.html>
 - Organizer page: <http://localhost:8000/create.html>
-
-## Run static only (single-browser demo)
-```bash
-python3 -m http.server 8000
-```
-This mode does **not** share data across devices.
 
 ## Publish to GitHub
 If you don't see this project in GitHub yet, the local repository likely has no remote configured.
@@ -51,9 +40,3 @@ You can verify with:
 git remote -v
 git log --oneline -n 5
 ```
-
-
-## Deployment note
-- If your site is deployed as static files only (for example, simple file hosting), `/api/events` does not exist, so global saving cannot work.
-- To make `coach.cvsoccer.club` shared, deploy `server.js` on your host and keep `data/events.json` writable by the server process.
-- After deployment, open `/api/events` in a browser and confirm it returns JSON.
