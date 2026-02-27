@@ -1,29 +1,25 @@
+const STORAGE_KEY = "teamsignups-events";
+
 function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-function setSyncStatus(message, type = "info") {
-  const banner = document.getElementById("sync-status");
-  if (!banner) return;
-  banner.textContent = message;
-  banner.dataset.type = type;
+function loadEvents() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  } catch {
+    return [];
+  }
 }
 
-async function loadEvents() {
-  const response = await fetch("/api/events", { cache: "no-store" });
-  if (!response.ok) throw new Error("Unable to load events");
-  const payload = await response.json();
-  return Array.isArray(payload.events) ? payload.events : [];
+function saveEvents(events) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
 }
 
-async function saveEvents(events) {
-  const response = await fetch("/api/events", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ events })
-  });
-
-  if (!response.ok) throw new Error("Unable to save events");
+function removeEvent(eventId) {
+  const events = loadEvents();
+  const nextEvents = events.filter((event) => event.id !== eventId);
+  saveEvents(nextEvents);
 }
 
 function formatDate(rawDate) {
@@ -56,8 +52,8 @@ function createSlotInput(slotInputs, slotTemplate, defaultName = "", defaultCoun
   slotInputs.appendChild(row);
 }
 
-async function claimSlot(eventId, slotId, payload) {
-  const events = await loadEvents();
+function claimSlot(eventId, slotId, payload) {
+  const events = loadEvents();
   const event = events.find((item) => item.id === eventId);
   if (!event) return;
 
@@ -74,20 +70,14 @@ async function claimSlot(eventId, slotId, payload) {
     publicName: publicDisplayName(payload.firstName, payload.lastName)
   });
 
-  await saveEvents(events);
+  saveEvents(events);
 }
 
-async function removeEvent(eventId) {
-  const events = await loadEvents();
-  const updated = events.filter((event) => event.id !== eventId);
-  await saveEvents(updated);
-}
-
-async function renderPublicSignupPage() {
+function renderPublicSignupPage() {
   const container = document.getElementById("public-event-list");
   if (!container) return;
 
-  const events = (await loadEvents()).sort((a, b) => a.date.localeCompare(b.date));
+  const events = loadEvents().sort((a, b) => a.date.localeCompare(b.date));
   container.innerHTML = "";
 
   if (!events.length) {
@@ -132,17 +122,17 @@ async function renderPublicSignupPage() {
         </form>
       `;
 
-      slotNode.querySelector("form").addEventListener("submit", async (e) => {
+      slotNode.querySelector("form").addEventListener("submit", (e) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
-        await claimSlot(event.id, slot.id, {
+        claimSlot(event.id, slot.id, {
           firstName: String(formData.get("firstName") || ""),
           lastName: String(formData.get("lastName") || ""),
           email: String(formData.get("email") || ""),
           phone: String(formData.get("phone") || ""),
           notes: String(formData.get("notes") || "")
         });
-        await renderPublicSignupPage();
+        renderPublicSignupPage();
       });
 
       slotsWrap.appendChild(slotNode);
@@ -152,11 +142,11 @@ async function renderPublicSignupPage() {
   });
 }
 
-async function renderAdminPage() {
+function renderAdminPage() {
   const adminContainer = document.getElementById("admin-event-list");
   if (!adminContainer) return;
 
-  const events = (await loadEvents()).sort((a, b) => a.date.localeCompare(b.date));
+  const events = loadEvents().sort((a, b) => a.date.localeCompare(b.date));
   adminContainer.innerHTML = "";
 
   if (!events.length) {
@@ -218,11 +208,11 @@ async function renderAdminPage() {
       ${slotsHtml}
     `;
 
-    wrapper.querySelector(".remove-event")?.addEventListener("click", async () => {
+    wrapper.querySelector(".remove-event")?.addEventListener("click", () => {
       const shouldRemove = window.confirm("Remove this event and all signups?");
       if (!shouldRemove) return;
-      await removeEvent(event.id);
-      await renderAdminPage();
+      removeEvent(event.id);
+      renderAdminPage();
     });
 
     adminContainer.appendChild(wrapper);
@@ -239,7 +229,7 @@ function initCreatePage() {
 
   addSlotButton.addEventListener("click", () => createSlotInput(slotInputs, slotTemplate));
 
-  eventForm.addEventListener("submit", async (e) => {
+  eventForm.addEventListener("submit", (e) => {
     e.preventDefault();
 
     const title = document.getElementById("event-title").value.trim();
@@ -256,15 +246,15 @@ function initCreatePage() {
 
     if (!title || !date || !slots.length) return;
 
-    const events = await loadEvents();
+    const events = loadEvents();
     events.push({ id: uid(), title, description, date, slots });
-    await saveEvents(events);
+    saveEvents(events);
 
     eventForm.reset();
     slotInputs.innerHTML = "";
     createSlotInput(slotInputs, slotTemplate, "Example: Snack table", 2);
     createSlotInput(slotInputs, slotTemplate, "Example: Cleanup", 1);
-    await renderAdminPage();
+    renderAdminPage();
   });
 
   createSlotInput(slotInputs, slotTemplate, "Example: Snack table", 2);
@@ -272,31 +262,15 @@ function initCreatePage() {
   renderAdminPage();
 }
 
-async function init() {
-  try {
-    await loadEvents();
-    setSyncStatus("Shared storage connected. Events and signups are visible to all users.", "ok");
-  } catch {
-    setSyncStatus("Server offline. Run `npm start` so all users can share the same data.", "error");
-  }
-
+function init() {
   const currentPage = document.body.dataset.page;
 
   if (currentPage === "create") {
-    try {
-      await renderAdminPage();
-      initCreatePage();
-    } catch {
-      // status already set above
-    }
+    initCreatePage();
     return;
   }
 
-  try {
-    await renderPublicSignupPage();
-  } catch {
-    // status already set above
-  }
+  renderPublicSignupPage();
 }
 
 init();
