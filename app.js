@@ -16,6 +16,12 @@ function saveEvents(events) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
 }
 
+function removeEvent(eventId) {
+  const events = loadEvents();
+  const nextEvents = events.filter((event) => event.id !== eventId);
+  saveEvents(nextEvents);
+}
+
 function formatDate(rawDate) {
   const date = new Date(`${rawDate}T00:00:00`);
   return date.toLocaleDateString(undefined, {
@@ -102,7 +108,7 @@ function renderPublicSignupPage() {
         <div>
           <strong>${slot.name}</strong><br />
           <small>${slot.claimedBy.length}/${slot.count} filled</small>
-          ${volunteerList ? `<small><br />Signed up: ${volunteerList}</small>` : ""}
+          ${volunteerList ? `<p class="signed-up-list">Signed up: ${volunteerList}</p>` : ""}
         </div>
         <form class="signup-form" data-event-id="${event.id}" data-slot-id="${slot.id}">
           <div class="fields-grid">
@@ -193,11 +199,21 @@ function renderAdminPage() {
       .join("");
 
     wrapper.innerHTML = `
-      <h3>${event.title}</h3>
+      <div class="event-head">
+        <h3>${event.title}</h3>
+        <button type="button" class="danger remove-event" data-event-id="${event.id}">Remove event</button>
+      </div>
       <div class="event-meta">${formatDate(event.date)}</div>
       <p>${event.description || "No description provided."}</p>
       ${slotsHtml}
     `;
+
+    wrapper.querySelector(".remove-event")?.addEventListener("click", () => {
+      const shouldRemove = window.confirm("Remove this event and all signups?");
+      if (!shouldRemove) return;
+      removeEvent(event.id);
+      renderAdminPage();
+    });
 
     adminContainer.appendChild(wrapper);
   });
