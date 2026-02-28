@@ -244,17 +244,3 @@ td {
   color: #8e2e2e;
   border: 1px solid #ffd7d7;
 }
-
-
-.admin-token-row{
-  display:flex;
-  gap:12px;
-  align-items:flex-end;
-  flex-wrap:wrap;
-  margin:10px 0 6px;
-}
-
-.admin-token-row label{
-  flex:1 1 280px;
-}
-
