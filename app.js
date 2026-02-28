@@ -1,9 +1,5 @@
 let isApiOnline = false;
 
-const storageConfig = window.TEAMSIGNUPS_CONFIG || {};
-const googleScriptUrl = typeof storageConfig.googleScriptUrl === "string" ? storageConfig.googleScriptUrl.trim() : "";
-const storageLabel = googleScriptUrl ? "Google Sheets" : "server storage";
-
 function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
@@ -15,114 +11,48 @@ function setSyncStatus(message, type = "info") {
   banner.dataset.type = type;
 }
 
-function setActionStatus(message, type = "info") {
-  const banner = document.getElementById("action-status");
-  if (!banner) return;
-
-  if (!message) {
-    banner.hidden = true;
-    banner.textContent = "";
-    banner.dataset.type = "info";
-    return;
-  }
-
-  banner.hidden = false;
-  banner.textContent = message;
-  banner.dataset.type = type;
-}
-
 function showOfflineMessage(container) {
   if (!container) return;
   container.innerHTML = `
     <p class="empty">
-      Shared storage is offline. Connect Google Sheets or run the Node server so events/signups are saved for everyone.
+      Shared storage is offline. Start the Node server so events/signups are saved for everyone.
     </p>
   `;
 }
 
-function handleApiOffline() {
-  isApiOnline = false;
-  setSyncStatus(`Shared storage offline (${storageLabel}). Events are not shared.`, "error");
-}
+function setFormAvailability(enabled) {
+  document.querySelectorAll("input, textarea, button").forEach((field) => {
+    if (field.closest("nav")) return;
+    if (field.classList.contains("remove-event")) {
+      field.disabled = !enabled;
+      return;
+    }
 
-function ensureOnline() {
-  if (!isApiOnline) {
-    throw new Error("Storage offline");
-  }
-}
-
-function buildEventsEndpoint() {
-  if (!googleScriptUrl) return "/api/events";
-  return googleScriptUrl;
-}
-
-function setupStorageDiagnostics() {
-  const endpointNode = document.getElementById("storage-endpoint");
-  if (endpointNode) {
-    endpointNode.textContent = `Endpoint: ${buildEventsEndpoint()}`;
-  }
-
-  const verifyButton = document.getElementById("verify-storage");
-  if (!verifyButton) return;
-
-  verifyButton.addEventListener("click", async () => {
-    verifyButton.disabled = true;
-    setActionStatus("Checking shared storage connection...", "info");
-
-    try {
-      const events = await loadEvents();
-      isApiOnline = true;
-      setSyncStatus(`Shared storage connected (${storageLabel}). Events and signups are visible to all users.`, "ok");
-      setActionStatus(`Connection OK. Loaded ${events.length} event(s).`, "ok");
-
-      if (document.body.dataset.page === "create") {
-        await renderAdminPage();
-      } else {
-        await renderPublicSignupPage();
-      }
-    } catch (error) {
-      handleApiOffline();
-      setActionStatus(
-        `Connection failed. Verify the Apps Script deployment uses /exec and public access. ${error instanceof Error ? error.message : ""}`,
-        "error"
-      );
-    } finally {
-      verifyButton.disabled = false;
+    if (field.closest("form") || field.id === "add-slot") {
+      field.disabled = !enabled;
     }
   });
 }
 
+function handleApiOffline() {
+  isApiOnline = false;
+  setSyncStatus("Server offline. Events are not shared. Run `npm start` on your host/server.", "error");
+  setFormAvailability(false);
+}
+
 async function loadEvents() {
-  const response = await fetch(buildEventsEndpoint(), {
-    cache: "no-store",
-    method: "GET"
-  });
-
-  if (!response.ok) throw new Error(`Unable to load events (${response.status})`);
-
-  const text = await response.text();
-  const payload = JSON.parse(text);
+  const response = await fetch("/api/events", { cache: "no-store" });
+  if (!response.ok) throw new Error("Unable to load events");
+  const payload = await response.json();
   return Array.isArray(payload.events) ? payload.events : [];
 }
 
 async function saveEvents(events) {
-  const payload = JSON.stringify({ events });
-
-  const request = googleScriptUrl
-    ? {
-        method: "POST",
-        // Use a CORS-simple content type to avoid browser preflight OPTIONS
-        // requests, which Google Apps Script web apps do not handle reliably.
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: payload
-      }
-    : {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: payload
-      };
-
-  const response = await fetch(buildEventsEndpoint(), request);
+  const response = await fetch("/api/events", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ events })
+  });
 
   if (!response.ok) throw new Error("Unable to save events");
 }
@@ -158,7 +88,7 @@ function createSlotInput(slotInputs, slotTemplate, defaultName = "", defaultCoun
 }
 
 async function claimSlot(eventId, slotId, payload) {
-  ensureOnline();
+  if (!isApiOnline) return;
 
   const events = await loadEvents();
   const event = events.find((item) => item.id === eventId);
@@ -178,16 +108,28 @@ async function claimSlot(eventId, slotId, payload) {
   });
 
   await saveEvents(events);
-  setActionStatus("Thanks for volunteering! Your signup was saved.", "ok");
 }
 
 async function removeEvent(eventId) {
-  ensureOnline();
+  if (!isApiOnline) return;
 
   const events = await loadEvents();
   const updated = events.filter((event) => event.id !== eventId);
   await saveEvents(updated);
-  setActionStatus("Event removed.", "info");
+}
+
+async function removeSignup(eventId, slotId, signupId) {
+  if (!isApiOnline) return;
+
+  const events = await loadEvents();
+  const event = events.find((item) => item.id === eventId);
+  if (!event) return;
+
+  const slot = event.slots.find((item) => item.id === slotId);
+  if (!slot) return;
+
+  slot.claimedBy = slot.claimedBy.filter((person) => person.id !== signupId);
+  await saveEvents(events);
 }
 
 async function renderPublicSignupPage() {
@@ -246,7 +188,6 @@ async function renderPublicSignupPage() {
 
       slotNode.querySelector("form").addEventListener("submit", async (e) => {
         e.preventDefault();
-        setActionStatus("");
 
         try {
           const formData = new FormData(e.currentTarget);
@@ -260,7 +201,6 @@ async function renderPublicSignupPage() {
           await renderPublicSignupPage();
         } catch {
           handleApiOffline();
-          setActionStatus("Could not save signup because shared storage is offline.", "error");
           showOfflineMessage(container);
         }
       });
@@ -304,6 +244,7 @@ async function renderAdminPage() {
                 <td>${person.email}</td>
                 <td>${person.phone}</td>
                 <td>${person.notes || "-"}</td>
+                <td><button type="button" class="danger remove-signup" data-event-id="${event.id}" data-slot-id="${slot.id}" data-signup-id="${person.id}">Remove</button></td>
               </tr>
             `
           )
@@ -322,6 +263,7 @@ async function renderAdminPage() {
                         <th>Email</th>
                         <th>Phone</th>
                         <th>Notes</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>${rows}</tbody>
@@ -356,6 +298,22 @@ async function renderAdminPage() {
       }
     });
 
+    wrapper.querySelectorAll(".remove-signup").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const shouldRemove = window.confirm("Remove this signup entry?");
+        if (!shouldRemove) return;
+
+        try {
+          const { eventId, slotId, signupId } = button.dataset;
+          await removeSignup(eventId, slotId, signupId);
+          await renderAdminPage();
+        } catch {
+          handleApiOffline();
+          showOfflineMessage(adminContainer);
+        }
+      });
+    });
+
     adminContainer.appendChild(wrapper);
   });
 }
@@ -372,7 +330,7 @@ function initCreatePage() {
 
   eventForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    setActionStatus("");
+    if (!isApiOnline) return;
 
     const title = document.getElementById("event-title").value.trim();
     const description = document.getElementById("event-description").value.trim();
@@ -389,7 +347,6 @@ function initCreatePage() {
     if (!title || !date || !slots.length) return;
 
     try {
-      ensureOnline();
       const events = await loadEvents();
       events.push({ id: uid(), title, description, date, slots });
       await saveEvents(events);
@@ -398,11 +355,9 @@ function initCreatePage() {
       slotInputs.innerHTML = "";
       createSlotInput(slotInputs, slotTemplate, "Example: Snack table", 2);
       createSlotInput(slotInputs, slotTemplate, "Example: Cleanup", 1);
-      setActionStatus("Event created and shared successfully.", "ok");
       await renderAdminPage();
     } catch {
       handleApiOffline();
-      setActionStatus("Could not create event because shared storage is offline. Reconnect Google Sheets and redeploy the Apps Script web app.", "error");
       showOfflineMessage(document.getElementById("admin-event-list"));
     }
   });
@@ -412,12 +367,11 @@ function initCreatePage() {
 }
 
 async function init() {
-  setupStorageDiagnostics();
-
   try {
     await loadEvents();
     isApiOnline = true;
-    setSyncStatus(`Shared storage connected (${storageLabel}). Events and signups are visible to all users.`, "ok");
+    setSyncStatus("Shared storage connected. Events and signups are visible to all users.", "ok");
+    setFormAvailability(true);
   } catch {
     handleApiOffline();
   }
