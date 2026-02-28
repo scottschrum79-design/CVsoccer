@@ -15,6 +15,22 @@ function setSyncStatus(message, type = "info") {
   banner.dataset.type = type;
 }
 
+function setActionStatus(message, type = "info") {
+  const banner = document.getElementById("action-status");
+  if (!banner) return;
+
+  if (!message) {
+    banner.hidden = true;
+    banner.textContent = "";
+    banner.dataset.type = "info";
+    return;
+  }
+
+  banner.hidden = false;
+  banner.textContent = message;
+  banner.dataset.type = type;
+}
+
 function showOfflineMessage(container) {
   if (!container) return;
   container.innerHTML = `
@@ -38,6 +54,42 @@ function ensureOnline() {
 function buildEventsEndpoint() {
   if (!googleScriptUrl) return "/api/events";
   return googleScriptUrl;
+}
+
+function setupStorageDiagnostics() {
+  const endpointNode = document.getElementById("storage-endpoint");
+  if (endpointNode) {
+    endpointNode.textContent = `Endpoint: ${buildEventsEndpoint()}`;
+  }
+
+  const verifyButton = document.getElementById("verify-storage");
+  if (!verifyButton) return;
+
+  verifyButton.addEventListener("click", async () => {
+    verifyButton.disabled = true;
+    setActionStatus("Checking shared storage connection...", "info");
+
+    try {
+      const events = await loadEvents();
+      isApiOnline = true;
+      setSyncStatus(`Shared storage connected (${storageLabel}). Events and signups are visible to all users.`, "ok");
+      setActionStatus(`Connection OK. Loaded ${events.length} event(s).`, "ok");
+
+      if (document.body.dataset.page === "create") {
+        await renderAdminPage();
+      } else {
+        await renderPublicSignupPage();
+      }
+    } catch (error) {
+      handleApiOffline();
+      setActionStatus(
+        `Connection failed. Verify the Apps Script deployment uses /exec and public access. ${error instanceof Error ? error.message : ""}`,
+        "error"
+      );
+    } finally {
+      verifyButton.disabled = false;
+    }
+  });
 }
 
 async function loadEvents() {
@@ -126,6 +178,7 @@ async function claimSlot(eventId, slotId, payload) {
   });
 
   await saveEvents(events);
+  setActionStatus("Thanks for volunteering! Your signup was saved.", "ok");
 }
 
 async function removeEvent(eventId) {
@@ -134,6 +187,7 @@ async function removeEvent(eventId) {
   const events = await loadEvents();
   const updated = events.filter((event) => event.id !== eventId);
   await saveEvents(updated);
+  setActionStatus("Event removed.", "info");
 }
 
 async function renderPublicSignupPage() {
@@ -192,6 +246,7 @@ async function renderPublicSignupPage() {
 
       slotNode.querySelector("form").addEventListener("submit", async (e) => {
         e.preventDefault();
+        setActionStatus("");
 
         try {
           const formData = new FormData(e.currentTarget);
@@ -205,6 +260,7 @@ async function renderPublicSignupPage() {
           await renderPublicSignupPage();
         } catch {
           handleApiOffline();
+          setActionStatus("Could not save signup because shared storage is offline.", "error");
           showOfflineMessage(container);
         }
       });
@@ -316,6 +372,7 @@ function initCreatePage() {
 
   eventForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+    setActionStatus("");
 
     const title = document.getElementById("event-title").value.trim();
     const description = document.getElementById("event-description").value.trim();
@@ -332,6 +389,7 @@ function initCreatePage() {
     if (!title || !date || !slots.length) return;
 
     try {
+      ensureOnline();
       const events = await loadEvents();
       events.push({ id: uid(), title, description, date, slots });
       await saveEvents(events);
@@ -340,9 +398,11 @@ function initCreatePage() {
       slotInputs.innerHTML = "";
       createSlotInput(slotInputs, slotTemplate, "Example: Snack table", 2);
       createSlotInput(slotInputs, slotTemplate, "Example: Cleanup", 1);
+      setActionStatus("Event created and shared successfully.", "ok");
       await renderAdminPage();
     } catch {
       handleApiOffline();
+      setActionStatus("Could not create event because shared storage is offline. Reconnect Google Sheets and redeploy the Apps Script web app.", "error");
       showOfflineMessage(document.getElementById("admin-event-list"));
     }
   });
@@ -352,6 +412,8 @@ function initCreatePage() {
 }
 
 async function init() {
+  setupStorageDiagnostics();
+
   try {
     await loadEvents();
     isApiOnline = true;
