@@ -1,5 +1,9 @@
 let isApiOnline = false;
 
+const storageConfig = window.TEAMSIGNUPS_CONFIG || {};
+const googleScriptUrl = typeof storageConfig.googleScriptUrl === "string" ? storageConfig.googleScriptUrl.trim() : "";
+const storageLabel = googleScriptUrl ? "Google Sheets" : "server storage";
+
 function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
@@ -15,7 +19,7 @@ function showOfflineMessage(container) {
   if (!container) return;
   container.innerHTML = `
     <p class="empty">
-      Shared storage is offline. Start the Node server so events/signups are saved for everyone.
+      Shared storage is offline. Connect Google Sheets or run the Node server so events/signups are saved for everyone.
     </p>
   `;
 }
@@ -36,20 +40,30 @@ function setFormAvailability(enabled) {
 
 function handleApiOffline() {
   isApiOnline = false;
-  setSyncStatus("Server offline. Events are not shared. Run `npm start` on your host/server.", "error");
+  setSyncStatus(`Shared storage offline (${storageLabel}). Events are not shared.`, "error");
   setFormAvailability(false);
 }
 
+function buildEventsEndpoint() {
+  if (!googleScriptUrl) return "/api/events";
+  return googleScriptUrl;
+}
+
 async function loadEvents() {
-  const response = await fetch("/api/events", { cache: "no-store" });
+  const response = await fetch(buildEventsEndpoint(), {
+    cache: "no-store",
+    method: "GET"
+  });
   if (!response.ok) throw new Error("Unable to load events");
   const payload = await response.json();
   return Array.isArray(payload.events) ? payload.events : [];
 }
 
 async function saveEvents(events) {
-  const response = await fetch("/api/events", {
-    method: "PUT",
+  const method = googleScriptUrl ? "POST" : "PUT";
+
+  const response = await fetch(buildEventsEndpoint(), {
+    method,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ events })
   });
@@ -338,7 +352,7 @@ async function init() {
   try {
     await loadEvents();
     isApiOnline = true;
-    setSyncStatus("Shared storage connected. Events and signups are visible to all users.", "ok");
+    setSyncStatus(`Shared storage connected (${storageLabel}). Events and signups are visible to all users.`, "ok");
     setFormAvailability(true);
   } catch {
     handleApiOffline();

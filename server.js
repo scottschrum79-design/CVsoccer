@@ -6,32 +6,108 @@ const { URL } = require("node:url");
 const PORT = process.env.PORT || 8000;
 const rootDir = __dirname;
 const dataDir = path.join(rootDir, "data");
-const dataFile = path.join(dataDir, "events.json");
+const jsonDataFile = path.join(dataDir, "events.json");
+const csvDataFile = path.join(dataDir, "events.csv");
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8"
+  ".json": "application/json; charset=utf-8",
+  ".csv": "text/csv; charset=utf-8"
 };
 
-function ensureDataFile() {
+function ensureStorageFiles() {
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-  if (!fs.existsSync(dataFile)) {
-    fs.writeFileSync(dataFile, JSON.stringify({ events: [] }, null, 2));
+
+  if (!fs.existsSync(jsonDataFile)) {
+    fs.writeFileSync(jsonDataFile, JSON.stringify({ events: [] }, null, 2));
+  }
+
+  if (!fs.existsSync(csvDataFile)) {
+    fs.writeFileSync(
+      csvDataFile,
+      "eventId,eventTitle,eventDate,slotId,slotName,slotCapacity,signupId,publicName,firstName,lastName,email,phone,notes\n"
+    );
   }
 }
 
+function csvCell(value) {
+  const text = String(value ?? "");
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function eventsToCsv(events) {
+  const header =
+    "eventId,eventTitle,eventDate,slotId,slotName,slotCapacity,signupId,publicName,firstName,lastName,email,phone,notes";
+
+  const rows = [];
+
+  events.forEach((event) => {
+    (event.slots || []).forEach((slot) => {
+      const signups = Array.isArray(slot.claimedBy) ? slot.claimedBy : [];
+
+      if (!signups.length) {
+        rows.push(
+          [
+            event.id,
+            event.title,
+            event.date,
+            slot.id,
+            slot.name,
+            slot.count,
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ]
+            .map(csvCell)
+            .join(",")
+        );
+        return;
+      }
+
+      signups.forEach((signup) => {
+        rows.push(
+          [
+            event.id,
+            event.title,
+            event.date,
+            slot.id,
+            slot.name,
+            slot.count,
+            signup.id,
+            signup.publicName,
+            signup.firstName,
+            signup.lastName,
+            signup.email,
+            signup.phone,
+            signup.notes
+          ]
+            .map(csvCell)
+            .join(",")
+        );
+      });
+    });
+  });
+
+  return `${header}\n${rows.join("\n")}${rows.length ? "\n" : ""}`;
+}
+
 function readEvents() {
-  ensureDataFile();
-  const raw = fs.readFileSync(dataFile, "utf8");
+  ensureStorageFiles();
+  const raw = fs.readFileSync(jsonDataFile, "utf8");
   const payload = JSON.parse(raw);
   return Array.isArray(payload.events) ? payload.events : [];
 }
 
 function writeEvents(events) {
-  ensureDataFile();
-  fs.writeFileSync(dataFile, JSON.stringify({ events }, null, 2));
+  ensureStorageFiles();
+  fs.writeFileSync(jsonDataFile, JSON.stringify({ events }, null, 2));
+  fs.writeFileSync(csvDataFile, eventsToCsv(events));
 }
 
 function sendJson(res, statusCode, payload) {
@@ -99,11 +175,32 @@ function handleEventsApi(req, res) {
   sendJson(res, 405, { error: "Method not allowed." });
 }
 
+function handleEventsCsvApi(req, res) {
+  if (req.method !== "GET") {
+    sendJson(res, 405, { error: "Method not allowed." });
+    return;
+  }
+
+  try {
+    ensureStorageFiles();
+    const csv = fs.readFileSync(csvDataFile, "utf8");
+    res.writeHead(200, { "Content-Type": "text/csv; charset=utf-8" });
+    res.end(csv);
+  } catch {
+    sendJson(res, 500, { error: "Failed to load CSV export." });
+  }
+}
+
 const server = http.createServer((req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
 
   if (parsedUrl.pathname === "/api/events") {
     handleEventsApi(req, res);
+    return;
+  }
+
+  if (parsedUrl.pathname === "/api/events.csv") {
+    handleEventsCsvApi(req, res);
     return;
   }
 
