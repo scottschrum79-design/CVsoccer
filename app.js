@@ -6,7 +6,7 @@ const storageLabel = googleScriptUrl ? "Google Sheets" : "server storage";
 
 function getAdminToken() {
   try {
-    return (window.sessionStorage.getItem("TEAMSIGNUPS_ADMIN_TOKEN") || "").trim();
+    return (window.localStorage.getItem("TEAMSIGNUPS_ADMIN_TOKEN") || "").trim();
   } catch {
     return "";
   }
@@ -14,7 +14,7 @@ function getAdminToken() {
 
 function setAdminToken(token) {
   try {
-    if (token) window.sessionStorage.setItem("TEAMSIGNUPS_ADMIN_TOKEN", token.trim());
+    if (token) window.localStorage.setItem("TEAMSIGNUPS_ADMIN_TOKEN", token.trim());
   } catch {
     // ignore
   }
@@ -134,6 +134,10 @@ async function loadEvents(options = {}) {
 
   const text = await response.text();
   const payload = JSON.parse(text);
+if (payload && payload.ok === false) {
+  throw new Error(payload.error || "Unauthorized");
+}
+
   return Array.isArray(payload.events) ? payload.events : [];
 }
 
