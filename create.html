@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TeamSignups | Creator</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-page="create">
+    <header class="topbar">
+      <h1>TeamSignups</h1>
+      <p>Organizer / creator page</p>
+      <nav class="topnav">
+        <a href="index.html">Signup Page</a>
+        <a href="create.html" class="active">Creator Page</a>
+      </nav>
+    </header>
+
+    <main class="layout">
+      <section class="card">
+        <h2>Create an event</h2>
+        <form id="event-form" class="stack">
+          <label>
+            Event title
+            <input id="event-title" required maxlength="80" placeholder="Team snack duty" />
+          </label>
+          <label>
+            Description
+            <textarea id="event-description" rows="3" maxlength="300" placeholder="What do volunteers need to know?"></textarea>
+          </label>
+          <label>
+            Date
+            <input id="event-date" type="date" required />
+          </label>
+
+          <fieldset>
+            <legend>Slots</legend>
+            <div id="slot-inputs" class="stack"></div>
+            <button type="button" id="add-slot" class="secondary">+ Add slot</button>
+          </fieldset>
+
+          <button type="submit">Create event</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Organizer view</h2>
+        <p class="helper-text">Full volunteer details are visible here only.</p>
+        <p id="sync-status" class="sync-status" data-type="info">Checking shared storage...</p>
+        <div id="admin-event-list" class="stack"></div>
+      </section>
+    </main>
+
+    <template id="slot-template">
+      <div class="slot-row">
+        <input class="slot-label" placeholder="Slot name (e.g., Drinks)" required />
+        <input class="slot-count" type="number" min="1" max="20" value="1" required />
+        <button type="button" class="danger remove-slot" title="Remove slot">✕</button>
+      </div>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
