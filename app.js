@@ -60,13 +60,23 @@ async function loadEvents() {
 }
 
 async function saveEvents(events) {
-  const method = googleScriptUrl ? "POST" : "PUT";
+  const payload = JSON.stringify({ events });
 
-  const response = await fetch(buildEventsEndpoint(), {
-    method,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ events })
-  });
+  const request = googleScriptUrl
+    ? {
+        method: "POST",
+        // Use a CORS-simple content type to avoid browser preflight OPTIONS
+        // requests, which Google Apps Script web apps do not handle reliably.
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: payload
+      }
+    : {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: payload
+      };
+
+  const response = await fetch(buildEventsEndpoint(), request);
 
   if (!response.ok) throw new Error("Unable to save events");
 }
