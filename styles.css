@@ -218,3 +218,29 @@ td {
   width: auto;
   padding: 0.45rem 0.75rem;
 }
+
+
+.sync-status {
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  margin: 0 0 0.7rem;
+  font-size: 0.92rem;
+}
+
+.sync-status[data-type="info"] {
+  background: #eef3ff;
+  color: #2a4ca4;
+  border: 1px solid #d8e3ff;
+}
+
+.sync-status[data-type="ok"] {
+  background: #e8f7ee;
+  color: #1d6d3f;
+  border: 1px solid #cdeed9;
+}
+
+.sync-status[data-type="error"] {
+  background: #fff0f0;
+  color: #8e2e2e;
+  border: 1px solid #ffd7d7;
+}
