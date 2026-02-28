@@ -12,7 +12,6 @@ This creates `TeamSignups-package.zip` containing:
 - `app.js`
 - `create.html`
 - `data/events.json`
-- `data/events.csv`
 - `index.html`
 - `package.json`
 - `server.js`

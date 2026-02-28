@@ -6,7 +6,6 @@ zip -r TeamSignups-package.zip \
   app.js \
   create.html \
   data/events.json \
-  data/events.csv \
   index.html \
   package.json \
   server.js \
