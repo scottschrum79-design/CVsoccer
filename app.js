@@ -24,24 +24,15 @@ function showOfflineMessage(container) {
   `;
 }
 
-function setFormAvailability(enabled) {
-  document.querySelectorAll("input, textarea, button").forEach((field) => {
-    if (field.closest("nav")) return;
-    if (field.classList.contains("remove-event")) {
-      field.disabled = !enabled;
-      return;
-    }
-
-    if (field.closest("form") || field.id === "add-slot") {
-      field.disabled = !enabled;
-    }
-  });
-}
-
 function handleApiOffline() {
   isApiOnline = false;
   setSyncStatus(`Shared storage offline (${storageLabel}). Events are not shared.`, "error");
-  setFormAvailability(false);
+}
+
+function ensureOnline() {
+  if (!isApiOnline) {
+    throw new Error("Storage offline");
+  }
 }
 
 function buildEventsEndpoint() {
@@ -54,8 +45,11 @@ async function loadEvents() {
     cache: "no-store",
     method: "GET"
   });
-  if (!response.ok) throw new Error("Unable to load events");
-  const payload = await response.json();
+
+  if (!response.ok) throw new Error(`Unable to load events (${response.status})`);
+
+  const text = await response.text();
+  const payload = JSON.parse(text);
   return Array.isArray(payload.events) ? payload.events : [];
 }
 
@@ -112,7 +106,7 @@ function createSlotInput(slotInputs, slotTemplate, defaultName = "", defaultCoun
 }
 
 async function claimSlot(eventId, slotId, payload) {
-  if (!isApiOnline) return;
+  ensureOnline();
 
   const events = await loadEvents();
   const event = events.find((item) => item.id === eventId);
@@ -135,7 +129,7 @@ async function claimSlot(eventId, slotId, payload) {
 }
 
 async function removeEvent(eventId) {
-  if (!isApiOnline) return;
+  ensureOnline();
 
   const events = await loadEvents();
   const updated = events.filter((event) => event.id !== eventId);
@@ -322,7 +316,6 @@ function initCreatePage() {
 
   eventForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (!isApiOnline) return;
 
     const title = document.getElementById("event-title").value.trim();
     const description = document.getElementById("event-description").value.trim();
@@ -363,7 +356,6 @@ async function init() {
     await loadEvents();
     isApiOnline = true;
     setSyncStatus(`Shared storage connected (${storageLabel}). Events and signups are visible to all users.`, "ok");
-    setFormAvailability(true);
   } catch {
     handleApiOffline();
   }
