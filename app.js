@@ -4,6 +4,33 @@ const storageConfig = window.TEAMSIGNUPS_CONFIG || {};
 const googleScriptUrl = typeof storageConfig.googleScriptUrl === "string" ? storageConfig.googleScriptUrl.trim() : "";
 const storageLabel = googleScriptUrl ? "Google Sheets" : "server storage";
 
+function getAdminToken() {
+  try {
+    return (window.sessionStorage.getItem("TEAMSIGNUPS_ADMIN_TOKEN") || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+function setAdminToken(token) {
+  try {
+    if (token) window.sessionStorage.setItem("TEAMSIGNUPS_ADMIN_TOKEN", token.trim());
+  } catch {
+    // ignore
+  }
+}
+
+function buildGoogleUrl(params) {
+  const base = googleScriptUrl;
+  const url = new URL(base);
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") return;
+    url.searchParams.set(key, String(value));
+  });
+  return url.toString();
+}
+
+
 function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
@@ -70,7 +97,7 @@ function setupStorageDiagnostics() {
     setActionStatus("Checking shared storage connection...", "info");
 
     try {
-      const events = await loadEvents();
+      const events = await loadEvents({ admin: document.body.dataset.page === "create" });
       isApiOnline = true;
       setSyncStatus(`Shared storage connected (${storageLabel}). Events and signups are visible to all users.`, "ok");
       setActionStatus(`Connection OK. Loaded ${events.length} event(s).`, "ok");
@@ -92,8 +119,13 @@ function setupStorageDiagnostics() {
   });
 }
 
-async function loadEvents() {
-  const response = await fetch(buildEventsEndpoint(), {
+async function loadEvents(options = {}) {
+  const { admin = false } = options;
+  const endpoint = googleScriptUrl
+    ? (admin ? buildGoogleUrl({ token: getAdminToken() }) : buildGoogleUrl({ public: 1 }))
+    : buildEventsEndpoint();
+
+  const response = await fetch(endpoint, {
     cache: "no-store",
     method: "GET"
   });
@@ -108,24 +140,30 @@ async function loadEvents() {
 async function saveEvents(events) {
   const payload = JSON.stringify({ events });
 
-  const request = googleScriptUrl
-    ? {
-        method: "POST",
-        // Use a CORS-simple content type to avoid browser preflight OPTIONS
-        // requests, which Google Apps Script web apps do not handle reliably.
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: payload
-      }
-    : {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: payload
-      };
+  if (googleScriptUrl) {
+    const token = getAdminToken();
+    if (!token) throw new Error("Missing admin token");
 
-  const response = await fetch(buildEventsEndpoint(), request);
+    const response = await fetch(buildGoogleUrl({ action: "saveAll", token }), {
+      method: "POST",
+      // CORS-simple content type (avoid preflight)
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: payload
+    });
+
+    if (!response.ok) throw new Error("Unable to save events");
+    return;
+  }
+
+  const response = await fetch(buildEventsEndpoint(), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: payload
+  });
 
   if (!response.ok) throw new Error("Unable to save events");
 }
+
 
 function formatDate(rawDate) {
   const date = new Date(`${rawDate}T00:00:00`);
@@ -160,7 +198,40 @@ function createSlotInput(slotInputs, slotTemplate, defaultName = "", defaultCoun
 async function claimSlot(eventId, slotId, payload) {
   ensureOnline();
 
-  const events = await loadEvents();
+  if (googleScriptUrl) {
+    const signup = {
+      firstName: payload.firstName.trim(),
+      lastName: payload.lastName.trim(),
+      email: payload.email.trim(),
+      phone: payload.phone.trim(),
+      notes: payload.notes.trim(),
+      publicName: publicDisplayName(payload.firstName, payload.lastName),
+      timestamp: new Date().toISOString()
+    };
+
+    const response = await fetch(buildGoogleUrl({ action: "claimSlot" }), {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ eventId, slotId, signup })
+    });
+
+    if (!response.ok) throw new Error("Unable to save signup");
+
+    const resultText = await response.text();
+    let result;
+    try {
+      result = JSON.parse(resultText);
+    } catch {
+      result = {};
+    }
+
+    if (!result.ok) throw new Error(result.error || "Unable to save signup");
+
+    setActionStatus("Thanks for volunteering! Your signup was saved.", "ok");
+    return;
+  }
+
+  const events = await loadEvents({ admin: true });
   const event = events.find((item) => item.id === eventId);
   if (!event) return;
 
@@ -181,10 +252,11 @@ async function claimSlot(eventId, slotId, payload) {
   setActionStatus("Thanks for volunteering! Your signup was saved.", "ok");
 }
 
+
 async function removeEvent(eventId) {
   ensureOnline();
 
-  const events = await loadEvents();
+  const events = await loadEvents({ admin: true });
   const updated = events.filter((event) => event.id !== eventId);
   await saveEvents(updated);
   setActionStatus("Event removed.", "info");
@@ -198,7 +270,6 @@ async function renderPublicSignupPage() {
     showOfflineMessage(container);
     return;
   }
-
   const events = (await loadEvents()).sort((a, b) => a.date.localeCompare(b.date));
   container.innerHTML = "";
 
@@ -280,8 +351,7 @@ async function renderAdminPage() {
     showOfflineMessage(adminContainer);
     return;
   }
-
-  const events = (await loadEvents()).sort((a, b) => a.date.localeCompare(b.date));
+  const events = (await loadEvents({ admin: true })).sort((a, b) => a.date.localeCompare(b.date));
   adminContainer.innerHTML = "";
 
   if (!events.length) {
@@ -365,6 +435,33 @@ function initCreatePage() {
   const slotInputs = document.getElementById("slot-inputs");
   const slotTemplate = document.getElementById("slot-template");
   const addSlotButton = document.getElementById("add-slot");
+  const tokenInput = document.getElementById("admin-token");
+  const saveTokenButton = document.getElementById("save-admin-token");
+
+  if (tokenInput) {
+    tokenInput.value = getAdminToken();
+  }
+  if (saveTokenButton && tokenInput) {
+    saveTokenButton.addEventListener("click", async () => {
+      const token = tokenInput.value.trim();
+      if (!token) return;
+
+      setAdminToken(token);
+      setActionStatus("Admin token saved for this browser session.", "ok");
+
+      // Re-verify shared storage with admin access
+      try {
+        await loadEvents({ admin: true });
+        isApiOnline = true;
+        setSyncStatus(`Shared storage online (${storageLabel}).`, "ok");
+        await renderAdminPage();
+      } catch {
+        handleApiOffline();
+        setSyncStatus("Admin token saved, but could not verify admin access.", "error");
+      }
+    });
+  }
+
 
   if (!eventForm || !slotInputs || !slotTemplate || !addSlotButton) return;
 
@@ -390,7 +487,7 @@ function initCreatePage() {
 
     try {
       ensureOnline();
-      const events = await loadEvents();
+      const events = await loadEvents({ admin: true });
       events.push({ id: uid(), title, description, date, slots });
       await saveEvents(events);
 
