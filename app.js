@@ -126,22 +126,28 @@ async function loadEvents() {
 async function saveEvents(events) {
     const payload = JSON.stringify({ events });
 
-    const request = googleScriptUrl
-        ? {
+    // Google Apps Script can redirect POSTs, which often triggers CORS issues on GitHub Pages.
+    // Using no-cors makes the request "fire-and-forget"; the next GET will confirm success.
+    if (googleScriptUrl) {
+        await fetch(buildEventsEndpoint(), {
             method: "POST",
-            // CORS-simple (avoid preflight that GAS doesn't handle well)
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            mode: "no-cors",
+            cache: "no-store",
             body: payload,
-        }
-        : {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: payload,
-        };
+        });
+        return;
+    }
 
-    const response = await fetch(buildEventsEndpoint(), request);
+    // Node server fallback
+    const response = await fetch(buildEventsEndpoint(), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+    });
+
     if (!response.ok) throw new Error("Unable to save events");
 }
+
 
 // ---------- Domain logic ----------
 function formatDate(rawDate) {
