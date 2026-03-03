@@ -494,10 +494,11 @@ function initCreatePage() {
 
         if (!title || !date || !slots.length) return;
 
+        showLoading("Creating event...");
         try {
-            showLoading("Creating event...");
-            await nextPaint();
-            ensureOnline();
+            await nextPaint();      // ok to keep
+            ensureOnline();         // if this throws, finally still runs
+
             const events = await loadEvents();
             events.push({ id: uid(), title, description, date, slots });
             await saveEvents(events);
@@ -506,12 +507,20 @@ function initCreatePage() {
             slotInputs.innerHTML = "";
             createSlotInput(slotInputs, slotTemplate, "Example: Snack table", 2);
             createSlotInput(slotInputs, slotTemplate, "Example: Cleanup", 1);
+
             setActionStatus("Event created and shared successfully.", "ok");
-            await renderAdminPage();
-        } catch {
+
+            await renderAdminPage(); // if this throws, spinner still clears
+        } catch (err) {
+            console.error("Create event failed:", err);
             handleApiOffline();
-            setActionStatus("Could not create event because shared storage is offline. Reconnect Google Sheets and redeploy the Apps Script web app.", "error");
+            setActionStatus(
+                "Could not create event because shared storage is offline. Reconnect Google Sheets and redeploy the Apps Script web app.",
+                "error"
+            );
             showOfflineMessage(document.getElementById("admin-event-list"));
+        } finally {
+            hideLoading(); // ✅ ALWAYS clears spinner
         }
     });
 
