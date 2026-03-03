@@ -4,6 +4,22 @@ const storageConfig = window.TEAMSIGNUPS_CONFIG || {};
 const googleScriptUrl = typeof storageConfig.googleScriptUrl === "string" ? storageConfig.googleScriptUrl.trim() : "";
 const storageLabel = googleScriptUrl ? "Google Sheets" : "server storage";
 
+function showLoading(message = "Updating…") {
+    const overlay = document.getElementById("loadingOverlay");
+    if (!overlay) return;
+
+    overlay.classList.remove("hidden");
+    const text = overlay.querySelector(".loading-text");
+    if (text) text.textContent = message;
+}
+
+function hideLoading() {
+    const overlay = document.getElementById("loadingOverlay");
+    if (!overlay) return;
+
+    overlay.classList.add("hidden");
+}
+
 function uid() {
     return Math.random().toString(36).slice(2, 10);
 }
@@ -177,7 +193,13 @@ async function claimSlot(eventId, slotId, payload) {
         publicName: publicDisplayName(payload.firstName, payload.lastName)
     });
 
-    await saveEvents(events);
+    try {
+        showLoading("Signing you up...");
+        await saveEvents(events);
+        await renderPublicPage();
+    } finally {
+        hideLoading();
+    }
     setActionStatus("Thanks for volunteering! Your signup was saved.", "ok");
 }
 
@@ -395,8 +417,11 @@ async function renderAdminPage() {
                 if (!shouldRemove) return;
 
                 try {
+                    showLoading("Removing signup...");
                     await removeSignup(eventId, slotId, personId);
                     await renderAdminPage();
+                } finally {
+                    hideLoading();
                 } catch {
                     handleApiOffline();
                     showOfflineMessage(adminContainer);
