@@ -2,6 +2,7 @@
 
 const storageConfig = window.TEAMSIGNUPS_CONFIG || {};
 const googleScriptUrl = typeof storageConfig.googleScriptUrl === "string" ? storageConfig.googleScriptUrl.trim() : "";
+let resolvedGoogleUrl = "";
 const storageLabel = googleScriptUrl ? "Google Sheets" : "server storage";
 
 // ---------- Helpers ----------
@@ -70,6 +71,8 @@ function ensureOnline() {
 
 function buildEventsEndpoint() {
     if (!googleScriptUrl) return "/api/events";
+    // If we have learned the final redirected Apps Script URL (googleusercontent echo), use it.
+    if (resolvedGoogleUrl) return resolvedGoogleUrl;
     return googleScriptUrl;
 }
 
@@ -117,6 +120,10 @@ function setupStorageDiagnostics() {
 async function loadEvents() {
     const response = await fetch(buildEventsEndpoint(), { cache: "no-store", method: "GET" });
     if (!response.ok) throw new Error(`Unable to load events (${response.status})`);
+
+    if (googleScriptUrl && response.url) {
+        resolvedGoogleUrl = response.url;
+    }
 
     const text = await response.text();
     const payload = JSON.parse(text);
