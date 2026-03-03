@@ -195,8 +195,9 @@ async function claimSlot(eventId, slotId, payload) {
 
     try {
         showLoading("Signing you up...");
+        await new Promise(requestAnimationFrame);
         await saveEvents(events);
-        await renderPublicPage();
+        await renderPublicSignupPage();
     } finally {
         hideLoading();
     }
@@ -418,13 +419,17 @@ async function renderAdminPage() {
 
                 try {
                     showLoading("Removing signup...");
+
+                    // force browser to paint the spinner before the network call
+                    await new Promise(requestAnimationFrame);
+
                     await removeSignup(eventId, slotId, personId);
                     await renderAdminPage();
-                } finally {
-                    hideLoading();
                 } catch {
                     handleApiOffline();
                     showOfflineMessage(adminContainer);
+                } finally {
+                    hideLoading();
                 }
             });
         });
