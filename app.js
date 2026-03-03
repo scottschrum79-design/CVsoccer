@@ -4,22 +4,6 @@ const storageConfig = window.TEAMSIGNUPS_CONFIG || {};
 const googleScriptUrl = typeof storageConfig.googleScriptUrl === "string" ? storageConfig.googleScriptUrl.trim() : "";
 const storageLabel = googleScriptUrl ? "Google Sheets" : "server storage";
 
-function showLoading(message = "Updating…") {
-    const overlay = document.getElementById("loadingOverlay");
-    if (!overlay) return;
-
-    overlay.classList.remove("hidden");
-    const text = overlay.querySelector(".loading-text");
-    if (text) text.textContent = message;
-}
-
-function hideLoading() {
-    const overlay = document.getElementById("loadingOverlay");
-    if (!overlay) return;
-
-    overlay.classList.add("hidden");
-}
-
 function uid() {
     return Math.random().toString(36).slice(2, 10);
 }
@@ -45,6 +29,20 @@ function setActionStatus(message, type = "info") {
     banner.hidden = false;
     banner.textContent = message;
     banner.dataset.type = type;
+}
+
+function showLoading(message = "Updating...") {
+    const overlay = document.getElementById("loadingOverlay");
+    if (!overlay) return;
+    overlay.classList.remove("hidden");
+    const text = overlay.querySelector(".loading-text");
+    if (text) text.textContent = message;
+}
+
+function hideLoading() {
+    const overlay = document.getElementById("loadingOverlay");
+    if (!overlay) return;
+    overlay.classList.add("hidden");
 }
 
 function showOfflineMessage(container) {
@@ -175,63 +173,48 @@ function createSlotInput(slotInputs, slotTemplate, defaultName = "", defaultCoun
 
 async function claimSlot(eventId, slotId, payload) {
     ensureOnline();
-
-    const events = await loadEvents();
-    const event = events.find((item) => item.id === eventId);
-    if (!event) return;
-
-    const slot = event.slots.find((item) => item.id === slotId);
-    if (!slot || slot.claimedBy.length >= slot.count) return;
-
-    slot.claimedBy.push({
-        id: uid(),
-        firstName: payload.firstName.trim(),
-        lastName: payload.lastName.trim(),
-        email: payload.email.trim(),
-        phone: payload.phone.trim(),
-        notes: payload.notes.trim(),
-        publicName: publicDisplayName(payload.firstName, payload.lastName)
-    });
-
+    showLoading("Signing you up...");
+    await new Promise(requestAnimationFrame);
     try {
-        showLoading("Signing you up...");
-        await new Promise(requestAnimationFrame);
+
+        const events = await loadEvents();
+        const event = events.find((item) => item.id === eventId);
+        if (!event) return;
+
+        const slot = event.slots.find((item) => item.id === slotId);
+        if (!slot || slot.claimedBy.length >= slot.count) return;
+
+        slot.claimedBy.push({
+            id: uid(),
+            firstName: payload.firstName.trim(),
+            lastName: payload.lastName.trim(),
+            email: payload.email.trim(),
+            phone: payload.phone.trim(),
+            notes: payload.notes.trim(),
+            publicName: publicDisplayName(payload.firstName, payload.lastName)
+        });
+
         await saveEvents(events);
-        await renderPublicSignupPage();
+        setActionStatus("Thanks for volunteering! Your signup was saved.", "ok");
     } finally {
         hideLoading();
     }
-    setActionStatus("Thanks for volunteering! Your signup was saved.", "ok");
 }
 
 async function removeEvent(eventId) {
     ensureOnline();
+    showLoading("Removing event...");
+    await new Promise(requestAnimationFrame);
+    try {
 
-    const events = await loadEvents();
-    const updated = events.filter((event) => event.id !== eventId);
-    await saveEvents(updated);
-    setActionStatus("Event removed.", "info");
+        const events = await loadEvents();
+        const updated = events.filter((event) => event.id !== eventId);
+        await saveEvents(updated);
+        setActionStatus("Event removed.", "info");
+    } finally {
+        hideLoading();
+    }
 }
-
-async function removeSignup(eventId, slotId, personId) {
-    ensureOnline();
-
-    const events = await loadEvents();
-    const event = events.find((item) => item.id === eventId);
-    if (!event) return;
-
-    const slot = (event.slots || []).find((item) => item.id === slotId);
-    if (!slot || !Array.isArray(slot.claimedBy)) return;
-
-    const before = slot.claimedBy.length;
-    slot.claimedBy = slot.claimedBy.filter((person) => person.id !== personId);
-
-    if (slot.claimedBy.length === before) return;
-
-    await saveEvents(events);
-    setActionStatus("Signup removed.", "info");
-}
-
 
 async function renderPublicSignupPage() {
     const container = document.getElementById("public-event-list");
@@ -347,15 +330,6 @@ async function renderAdminPage() {
                 <td>${person.email}</td>
                 <td>${person.phone}</td>
                 <td>${person.notes || "-"}</td>
-                <td>
-                  <button type="button"
-                          class="danger small remove-signup"
-                          data-event-id="${event.id}"
-                          data-slot-id="${slot.id}"
-                          data-person-id="${person.id}">
-                    Remove
-                  </button>
-                </td>
               </tr>
             `
                     )
@@ -373,7 +347,6 @@ async function renderAdminPage() {
                         <th>Email</th>
                         <th>Phone</th>
                         <th>Notes</th>
-                        <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>${rows}</tbody>
@@ -406,32 +379,6 @@ async function renderAdminPage() {
                 handleApiOffline();
                 showOfflineMessage(adminContainer);
             }
-        });
-
-        wrapper.querySelectorAll(".remove-signup").forEach((button) => {
-            button.addEventListener("click", async () => {
-                const eventId = button.dataset.eventId;
-                const slotId = button.dataset.slotId;
-                const personId = button.dataset.personId;
-
-                const shouldRemove = window.confirm("Remove this signup?");
-                if (!shouldRemove) return;
-
-                try {
-                    showLoading("Removing signup...");
-
-                    // force browser to paint the spinner before the network call
-                    await new Promise(requestAnimationFrame);
-
-                    await removeSignup(eventId, slotId, personId);
-                    await renderAdminPage();
-                } catch {
-                    handleApiOffline();
-                    showOfflineMessage(adminContainer);
-                } finally {
-                    hideLoading();
-                }
-            });
         });
 
         adminContainer.appendChild(wrapper);
@@ -468,6 +415,8 @@ function initCreatePage() {
 
         try {
             ensureOnline();
+            showLoading("Saving event...");
+            await new Promise(requestAnimationFrame);
             const events = await loadEvents();
             events.push({ id: uid(), title, description, date, slots });
             await saveEvents(events);
@@ -482,6 +431,9 @@ function initCreatePage() {
             handleApiOffline();
             setActionStatus("Could not create event because shared storage is offline. Reconnect Google Sheets and redeploy the Apps Script web app.", "error");
             showOfflineMessage(document.getElementById("admin-event-list"));
+        }
+        finally {
+            hideLoading();
         }
     });
 
