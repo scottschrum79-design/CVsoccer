@@ -4,7 +4,6 @@ const storageConfig = window.TEAMSIGNUPS_CONFIG || {};
 const googleScriptUrl = typeof storageConfig.googleScriptUrl === "string" ? storageConfig.googleScriptUrl.trim() : "";
 const storageLabel = googleScriptUrl ? "Google Sheets" : "server storage";
 
-// ---------- Helpers ----------
 function uid() {
     return Math.random().toString(36).slice(2, 10);
 }
@@ -32,24 +31,6 @@ function setActionStatus(message, type = "info") {
     banner.dataset.type = type;
 }
 
-function showLoading(message = "Updating…") {
-    const overlay = document.getElementById("loadingOverlay");
-    if (!overlay) return;
-    overlay.classList.remove("hidden");
-    const text = overlay.querySelector(".loading-text");
-    if (text) text.textContent = message;
-}
-
-function hideLoading() {
-    const overlay = document.getElementById("loadingOverlay");
-    if (!overlay) return;
-    overlay.classList.add("hidden");
-}
-
-function waitForPaint() {
-    return new Promise((resolve) => requestAnimationFrame(() => resolve()));
-}
-
 function showOfflineMessage(container) {
     if (!container) return;
     container.innerHTML = `
@@ -65,7 +46,9 @@ function handleApiOffline() {
 }
 
 function ensureOnline() {
-    if (!isApiOnline) throw new Error("Storage offline");
+    if (!isApiOnline) {
+        throw new Error("Storage offline");
+    }
 }
 
 function buildEventsEndpoint() {
@@ -73,10 +56,11 @@ function buildEventsEndpoint() {
     return googleScriptUrl;
 }
 
-// ---------- Storage diagnostics ----------
 function setupStorageDiagnostics() {
     const endpointNode = document.getElementById("storage-endpoint");
-    if (endpointNode) endpointNode.textContent = `Endpoint: ${buildEventsEndpoint()}`;
+    if (endpointNode) {
+        endpointNode.textContent = `Endpoint: ${buildEventsEndpoint()}`;
+    }
 
     const verifyButton = document.getElementById("verify-storage");
     if (!verifyButton) return;
@@ -86,12 +70,8 @@ function setupStorageDiagnostics() {
         setActionStatus("Checking shared storage connection...", "info");
 
         try {
-            showLoading("Checking connection...");
-            await waitForPaint();
-
             const events = await loadEvents();
             isApiOnline = true;
-
             setSyncStatus(`Shared storage connected (${storageLabel}). Events and signups are visible to all users.`, "ok");
             setActionStatus(`Connection OK. Loaded ${events.length} event(s).`, "ok");
 
@@ -107,15 +87,17 @@ function setupStorageDiagnostics() {
                 "error"
             );
         } finally {
-            hideLoading();
             verifyButton.disabled = false;
         }
     });
 }
 
-// ---------- API ----------
 async function loadEvents() {
-    const response = await fetch(buildEventsEndpoint(), { cache: "no-store", method: "GET" });
+    const response = await fetch(buildEventsEndpoint(), {
+        cache: "no-store",
+        method: "GET"
+    });
+
     if (!response.ok) throw new Error(`Unable to load events (${response.status})`);
 
     const text = await response.text();
@@ -129,24 +111,29 @@ async function saveEvents(events) {
     const request = googleScriptUrl
         ? {
             method: "POST",
-            // CORS-simple (avoid preflight that GAS doesn't handle well)
+            // Use a CORS-simple content type to avoid browser preflight OPTIONS
+            // requests, which Google Apps Script web apps do not handle reliably.
             headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: payload,
+            body: payload
         }
         : {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: payload,
+            body: payload
         };
 
     const response = await fetch(buildEventsEndpoint(), request);
+
     if (!response.ok) throw new Error("Unable to save events");
 }
 
-// ---------- Domain logic ----------
 function formatDate(rawDate) {
     const date = new Date(`${rawDate}T00:00:00`);
-    return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    return date.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+    });
 }
 
 function publicDisplayName(firstName, lastName) {
@@ -177,11 +164,8 @@ async function claimSlot(eventId, slotId, payload) {
     const event = events.find((item) => item.id === eventId);
     if (!event) return;
 
-    const slot = (event.slots || []).find((item) => item.id === slotId);
-    if (!slot) return;
-
-    slot.claimedBy = Array.isArray(slot.claimedBy) ? slot.claimedBy : [];
-    if (slot.claimedBy.length >= slot.count) return;
+    const slot = event.slots.find((item) => item.id === slotId);
+    if (!slot || slot.claimedBy.length >= slot.count) return;
 
     slot.claimedBy.push({
         id: uid(),
@@ -190,7 +174,7 @@ async function claimSlot(eventId, slotId, payload) {
         email: payload.email.trim(),
         phone: payload.phone.trim(),
         notes: payload.notes.trim(),
-        publicName: publicDisplayName(payload.firstName, payload.lastName),
+        publicName: publicDisplayName(payload.firstName, payload.lastName)
     });
 
     await saveEvents(events);
@@ -199,6 +183,7 @@ async function claimSlot(eventId, slotId, payload) {
 
 async function removeEvent(eventId) {
     ensureOnline();
+
     const events = await loadEvents();
     const updated = events.filter((event) => event.id !== eventId);
     await saveEvents(updated);
@@ -217,13 +202,14 @@ async function removeSignup(eventId, slotId, personId) {
 
     const before = slot.claimedBy.length;
     slot.claimedBy = slot.claimedBy.filter((person) => person.id !== personId);
+
     if (slot.claimedBy.length === before) return;
 
     await saveEvents(events);
     setActionStatus("Signup removed.", "info");
 }
 
-// ---------- Rendering: Public ----------
+
 async function renderPublicSignupPage() {
     const container = document.getElementById("public-event-list");
     if (!container) return;
@@ -244,6 +230,7 @@ async function renderPublicSignupPage() {
     events.forEach((event) => {
         const wrapper = document.createElement("article");
         wrapper.className = "event";
+
         wrapper.innerHTML = `
       <h3>${event.title}</h3>
       <div class="event-meta">${formatDate(event.date)}</div>
@@ -253,8 +240,7 @@ async function renderPublicSignupPage() {
 
         const slotsWrap = wrapper.querySelector(".slots-wrap");
 
-        (event.slots || []).forEach((slot) => {
-            slot.claimedBy = Array.isArray(slot.claimedBy) ? slot.claimedBy : [];
+        event.slots.forEach((slot) => {
             const remaining = slot.count - slot.claimedBy.length;
             const volunteerList = slot.claimedBy.map((person) => person.publicName).join(", ");
 
@@ -283,25 +269,19 @@ async function renderPublicSignupPage() {
                 setActionStatus("");
 
                 try {
-                    showLoading("Signing you up...");
-                    await waitForPaint();
-
                     const formData = new FormData(e.currentTarget);
                     await claimSlot(event.id, slot.id, {
                         firstName: String(formData.get("firstName") || ""),
                         lastName: String(formData.get("lastName") || ""),
                         email: String(formData.get("email") || ""),
                         phone: String(formData.get("phone") || ""),
-                        notes: String(formData.get("notes") || ""),
+                        notes: String(formData.get("notes") || "")
                     });
-
                     await renderPublicSignupPage();
                 } catch {
                     handleApiOffline();
                     setActionStatus("Could not save signup because shared storage is offline.", "error");
                     showOfflineMessage(container);
-                } finally {
-                    hideLoading();
                 }
             });
 
@@ -312,7 +292,6 @@ async function renderPublicSignupPage() {
     });
 }
 
-// ---------- Rendering: Admin ----------
 async function renderAdminPage() {
     const adminContainer = document.getElementById("admin-event-list");
     if (!adminContainer) return;
@@ -334,18 +313,16 @@ async function renderAdminPage() {
         const wrapper = document.createElement("article");
         wrapper.className = "event";
 
-        const slotsHtml = (event.slots || [])
+        const slotsHtml = event.slots
             .map((slot) => {
-                slot.claimedBy = Array.isArray(slot.claimedBy) ? slot.claimedBy : [];
-
                 const rows = slot.claimedBy
                     .map(
                         (person) => `
               <tr>
                 <td>${person.publicName}</td>
-                <td>${person.firstName || ""} ${person.lastName || ""}</td>
-                <td>${person.email || ""}</td>
-                <td>${person.phone || ""}</td>
+                <td>${person.firstName} ${person.lastName}</td>
+                <td>${person.email}</td>
+                <td>${person.phone}</td>
                 <td>${person.notes || "-"}</td>
                 <td>
                   <button type="button"
@@ -400,16 +377,11 @@ async function renderAdminPage() {
             if (!shouldRemove) return;
 
             try {
-                showLoading("Removing event...");
-                await waitForPaint();
-
                 await removeEvent(event.id);
                 await renderAdminPage();
             } catch {
                 handleApiOffline();
                 showOfflineMessage(adminContainer);
-            } finally {
-                hideLoading();
             }
         });
 
@@ -423,16 +395,11 @@ async function renderAdminPage() {
                 if (!shouldRemove) return;
 
                 try {
-                    showLoading("Removing signup...");
-                    await waitForPaint();
-
                     await removeSignup(eventId, slotId, personId);
                     await renderAdminPage();
                 } catch {
                     handleApiOffline();
                     showOfflineMessage(adminContainer);
-                } finally {
-                    hideLoading();
                 }
             });
         });
@@ -441,7 +408,6 @@ async function renderAdminPage() {
     });
 }
 
-// ---------- Create page ----------
 function initCreatePage() {
     const eventForm = document.getElementById("event-form");
     const slotInputs = document.getElementById("slot-inputs");
@@ -471,9 +437,6 @@ function initCreatePage() {
         if (!title || !date || !slots.length) return;
 
         try {
-            showLoading("Creating event...");
-            await waitForPaint();
-
             ensureOnline();
             const events = await loadEvents();
             events.push({ id: uid(), title, description, date, slots });
@@ -483,18 +446,12 @@ function initCreatePage() {
             slotInputs.innerHTML = "";
             createSlotInput(slotInputs, slotTemplate, "Example: Snack table", 2);
             createSlotInput(slotInputs, slotTemplate, "Example: Cleanup", 1);
-
             setActionStatus("Event created and shared successfully.", "ok");
             await renderAdminPage();
         } catch {
             handleApiOffline();
-            setActionStatus(
-                "Could not create event because shared storage is offline. Reconnect Google Sheets and redeploy the Apps Script web app.",
-                "error"
-            );
+            setActionStatus("Could not create event because shared storage is offline. Reconnect Google Sheets and redeploy the Apps Script web app.", "error");
             showOfflineMessage(document.getElementById("admin-event-list"));
-        } finally {
-            hideLoading();
         }
     });
 
@@ -502,7 +459,6 @@ function initCreatePage() {
     createSlotInput(slotInputs, slotTemplate, "Example: Cleanup", 1);
 }
 
-// ---------- Bootstrap ----------
 async function init() {
     setupStorageDiagnostics();
 
