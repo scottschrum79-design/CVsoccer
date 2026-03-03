@@ -261,7 +261,8 @@ async function removeSignup(eventId, slotId, personId) {
         await saveEvents(events);
         setActionStatus("Signup removed.", "info");
     } finally {
-        hideLoading();
+        await renderAdminPage();
+        await hideLoading();
     }
 }
 
@@ -453,7 +454,7 @@ async function renderAdminPage() {
 
                 try {
                     await removeSignup(eventId, slotId, personId);
-                    await renderAdminPage();
+                    
                 } catch {
                     handleApiOffline();
                     showOfflineMessage(adminContainer);
