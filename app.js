@@ -1,4 +1,4 @@
-let isApiOnline = false;
+﻿let isApiOnline = false;
 
 const storageConfig = window.TEAMSIGNUPS_CONFIG || {};
 const googleScriptUrl = typeof storageConfig.googleScriptUrl === "string" ? storageConfig.googleScriptUrl.trim() : "";
@@ -108,27 +108,19 @@ async function loadEvents() {
 async function saveEvents(events) {
     const payload = JSON.stringify({ events });
 
-    // Google Apps Script / Google Sheets backend
     if (googleScriptUrl) {
-        // If you have an admin token (and your script supports it), use it.
-        // Otherwise (original simple script), save without a token.
-        const token = getAdminToken();
-        const url = token
-            ? buildGoogleUrl({ action: "saveAll", token })
-            : googleScriptUrl;
-
-        const response = await fetch(url, {
+        await fetch(buildEventsEndpoint(), {
             method: "POST",
-            // CORS-simple content type (avoid preflight)
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            mode: "no-cors",   // 👈 KEY
             body: payload
         });
 
-        if (!response.ok) throw new Error("Unable to save events");
+        // With no-cors we can't inspect response,
+        // so assume success and let next GET confirm.
         return;
     }
 
-    // Node backend
+    // Node fallback
     const response = await fetch(buildEventsEndpoint(), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
