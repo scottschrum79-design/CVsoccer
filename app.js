@@ -5,7 +5,7 @@ const googleScriptUrl = typeof storageConfig.googleScriptUrl === "string" ? stor
 const storageLabel = googleScriptUrl ? "Google Sheets" : "server storage";
 
 let spinnerStartTime = 0;
-const MIN_SPINNER_TIME = 2000; // 2 seconds
+const MIN_SPINNER_TIME = 3000; // 2 seconds
 
 function showLoading(message = "Updating…") {
     const overlay = document.getElementById("loadingOverlay");
@@ -219,7 +219,8 @@ async function claimSlot(eventId, slotId, payload) {
         await saveEvents(events);
         setActionStatus("Thanks for volunteering! Your signup was saved.", "ok");
     } finally {
-        hideLoading();
+        await renderPublicSignupPage();
+        await hideLoading();
     }
 }
 
@@ -333,7 +334,7 @@ async function renderPublicSignupPage() {
                         phone: String(formData.get("phone") || ""),
                         notes: String(formData.get("notes") || "")
                     });
-                    await renderPublicSignupPage();
+                    
                 } catch {
                     handleApiOffline();
                     setActionStatus("Could not save signup because shared storage is offline.", "error");
