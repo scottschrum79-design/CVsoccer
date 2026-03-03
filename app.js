@@ -31,7 +31,9 @@ function setActionStatus(message, type = "info") {
     banner.dataset.type = type;
 }
 
-function showLoading(message = "Updating…") {
+
+// --- Loading overlay helpers (spinner) ---
+function showLoading(message = "Updating...") {
     const overlay = document.getElementById("loadingOverlay");
     if (!overlay) return;
     overlay.classList.remove("hidden");
@@ -45,12 +47,10 @@ function hideLoading() {
     overlay.classList.add("hidden");
 }
 
-async function paintLoading(message) {
-    showLoading(message);
-    // Let browser paint the overlay before doing slow work (Sheets/network)
-    await new Promise((resolve) => requestAnimationFrame(resolve));
+// Yield once so the browser paints the overlay before slow network work.
+function nextPaint() {
+    return new Promise((resolve) => setTimeout(resolve, 0));
 }
-
 
 function showOfflineMessage(container) {
     if (!container) return;
@@ -90,8 +90,11 @@ function setupStorageDiagnostics() {
         verifyButton.disabled = true;
         setActionStatus("Checking shared storage connection...", "info");
 
+        showLoading("Checking shared storage...");
+        await nextPaint();
+
+
         try {
-            await paintLoading("Checking shared storage…");
             const events = await loadEvents();
             isApiOnline = true;
             setSyncStatus(`Shared storage connected (${storageLabel}). Events and signups are visible to all users.`, "ok");
@@ -292,7 +295,8 @@ async function renderPublicSignupPage() {
                 setActionStatus("");
 
                 try {
-                    await paintLoading("Saving signup…");
+                    showLoading("Saving signup...");
+                    await nextPaint();
                     const formData = new FormData(e.currentTarget);
                     await claimSlot(event.id, slot.id, {
                         firstName: String(formData.get("firstName") || ""),
@@ -302,12 +306,12 @@ async function renderPublicSignupPage() {
                         notes: String(formData.get("notes") || "")
                     });
                     await renderPublicSignupPage();
+                    hideLoading();
                 } catch {
+                    hideLoading();
                     handleApiOffline();
                     setActionStatus("Could not save signup because shared storage is offline.", "error");
                     showOfflineMessage(container);
-                } finally {
-                    hideLoading();
                 }
             });
 
@@ -403,14 +407,15 @@ async function renderAdminPage() {
             if (!shouldRemove) return;
 
             try {
-                await paintLoading("Removing event…");
+                showLoading("Removing event...");
+                await nextPaint();
                 await removeEvent(event.id);
                 await renderAdminPage();
+                hideLoading();
             } catch {
+                hideLoading();
                 handleApiOffline();
                 showOfflineMessage(adminContainer);
-            } finally {
-                hideLoading();
             }
         });
 
@@ -424,14 +429,15 @@ async function renderAdminPage() {
                 if (!shouldRemove) return;
 
                 try {
-                    await paintLoading("Removing signup…");
+                    showLoading("Removing signup...");
+                    await nextPaint();
                     await removeSignup(eventId, slotId, personId);
                     await renderAdminPage();
+                    hideLoading();
                 } catch {
+                    hideLoading();
                     handleApiOffline();
                     showOfflineMessage(adminContainer);
-                } finally {
-                    hideLoading();
                 }
             });
         });
@@ -469,7 +475,8 @@ function initCreatePage() {
         if (!title || !date || !slots.length) return;
 
         try {
-            await paintLoading("Creating event…");
+            showLoading("Creating event...");
+            await nextPaint();
             ensureOnline();
             const events = await loadEvents();
             events.push({ id: uid(), title, description, date, slots });
@@ -481,12 +488,12 @@ function initCreatePage() {
             createSlotInput(slotInputs, slotTemplate, "Example: Cleanup", 1);
             setActionStatus("Event created and shared successfully.", "ok");
             await renderAdminPage();
+            hideLoading();
         } catch {
+            hideLoading();
             handleApiOffline();
             setActionStatus("Could not create event because shared storage is offline. Reconnect Google Sheets and redeploy the Apps Script web app.", "error");
             showOfflineMessage(document.getElementById("admin-event-list"));
-        } finally {
-            hideLoading();
         }
     });
 
