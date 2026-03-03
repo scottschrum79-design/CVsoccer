@@ -2,7 +2,6 @@
 
 const storageConfig = window.TEAMSIGNUPS_CONFIG || {};
 const googleScriptUrl = typeof storageConfig.googleScriptUrl === "string" ? storageConfig.googleScriptUrl.trim() : "";
-let resolvedGoogleUrl = "";
 const storageLabel = googleScriptUrl ? "Google Sheets" : "server storage";
 
 // ---------- Helpers ----------
@@ -71,8 +70,6 @@ function ensureOnline() {
 
 function buildEventsEndpoint() {
     if (!googleScriptUrl) return "/api/events";
-    // If we have learned the final redirected Apps Script URL (googleusercontent echo), use it.
-    if (resolvedGoogleUrl) return resolvedGoogleUrl;
     return googleScriptUrl;
 }
 
@@ -121,10 +118,6 @@ async function loadEvents() {
     const response = await fetch(buildEventsEndpoint(), { cache: "no-store", method: "GET" });
     if (!response.ok) throw new Error(`Unable to load events (${response.status})`);
 
-    if (googleScriptUrl && response.url) {
-        resolvedGoogleUrl = response.url;
-    }
-
     const text = await response.text();
     const payload = JSON.parse(text);
     return Array.isArray(payload.events) ? payload.events : [];
@@ -133,25 +126,20 @@ async function loadEvents() {
 async function saveEvents(events) {
     const payload = JSON.stringify({ events });
 
-    // Google Apps Script can redirect POSTs, which often triggers CORS issues on GitHub Pages.
-    // Using no-cors makes the request "fire-and-forget"; the next GET will confirm success.
-    if (googleScriptUrl) {
-        await fetch(buildEventsEndpoint(), {
+    const request = googleScriptUrl
+        ? {
             method: "POST",
-            mode: "no-cors",
-            cache: "no-store",
+            // CORS-simple (avoid preflight that GAS doesn't handle well)
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: payload,
-        });
-        return;
-    }
+        }
+        : {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: payload,
+        };
 
-    // Node server fallback
-    const response = await fetch(buildEventsEndpoint(), {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: payload,
-    });
-
+    const response = await fetch(buildEventsEndpoint(), request);
     if (!response.ok) throw new Error("Unable to save events");
 }
 
