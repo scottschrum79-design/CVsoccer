@@ -143,7 +143,6 @@ async function saveEvents(events) {
     if (!response.ok) throw new Error("Unable to save events");
 }
 
-
 // ---------- Domain logic ----------
 function formatDate(rawDate) {
     const date = new Date(`${rawDate}T00:00:00`);
