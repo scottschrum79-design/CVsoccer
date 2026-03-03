@@ -4,17 +4,32 @@ const storageConfig = window.TEAMSIGNUPS_CONFIG || {};
 const googleScriptUrl = typeof storageConfig.googleScriptUrl === "string" ? storageConfig.googleScriptUrl.trim() : "";
 const storageLabel = googleScriptUrl ? "Google Sheets" : "server storage";
 
-function showLoading(message = "Updating...") {
+let spinnerStartTime = 0;
+const MIN_SPINNER_TIME = 2000; // 2 seconds
+
+function showLoading(message = "Updating…") {
     const overlay = document.getElementById("loadingOverlay");
     if (!overlay) return;
+
+    spinnerStartTime = Date.now();
+
+    const text = overlay.querySelector(".loading-text");
+    if (text) text.textContent = message;
+
     overlay.classList.remove("hidden");
-    const textEl = overlay.querySelector(".loading-text");
-    if (textEl) textEl.textContent = message;
 }
 
-function hideLoading() {
+async function hideLoading() {
     const overlay = document.getElementById("loadingOverlay");
     if (!overlay) return;
+
+    const elapsed = Date.now() - spinnerStartTime;
+    const remaining = MIN_SPINNER_TIME - elapsed;
+
+    if (remaining > 0) {
+        await new Promise(resolve => setTimeout(resolve, remaining));
+    }
+
     overlay.classList.add("hidden");
 }
 
