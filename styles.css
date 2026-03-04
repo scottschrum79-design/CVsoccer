@@ -197,16 +197,29 @@ fieldset {
         margin: 0 0 0.3rem;
     }
 
-.event-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 0.75rem;
+.event-head{
+  display:flex;
+  align-items:center;
+  gap:12px;
 }
 
-    .event-head h3 {
-        margin: 0;
-    }
+.event-head h3{
+  flex:1;
+  margin:0;
+}
+
+/* Right-side buttons */
+.event-actions{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;     /* if narrow, they wrap nicely */
+}
+
+.event-actions button{
+  width:auto !important;
+  padding:8px 12px;
+}
 
 .modal::backdrop { background: rgba(0,0,0,0.4); }
 
