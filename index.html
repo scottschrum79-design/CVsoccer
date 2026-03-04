@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TeamSignups | Volunteer Signup</title>
+    <title>CV Soccer | Volunteer Signup</title>
     <link rel="stylesheet" href="styles.css" />
 </head>
 <body data-page="signup">
     <header class="topbar">
-        <h1>TeamSignups</h1>
-        <p>Volunteer signup page</p>
+        <h1>Coaching Signups</h1>
+        <p>Conestoga Valley Soccer</p>
         <nav class="topnav">
             <a href="index.html" class="active">Signup Page</a>
             <a href="create.html">Creator Page</a>
@@ -18,10 +18,73 @@
 
     <main class="layout single">
         <section class="card">
-            <h2>Open signup events</h2>
-            <p class="helper-text">Public view shows only volunteer display names (first initial + last name).</p>
+            <h2>Fall 2026 Season</h2>
+
+            <!-- QUICK SUMMARY (TOP) -->
+            <div class="info-block">
+                <h3 class="info-title">Season Overview</h3>
+                <ul class="info-list">
+                    <li><strong>Practices:</strong> Tuesday & Thursday, <strong>6:00–7:30 PM</strong> <span class="muted">(U8 / U6 typically end around 7:00)</span></li>
+                    <li><strong>Games:</strong> Saturdays within Lancaster County <span class="muted">(usually mornings, some afternoons)</span></li>
+                    <li><strong>U8 / U6 Games:</strong> Thursdays during normal practice time at <strong>home fields</strong></li>
+                    <li><strong>End of Season:</strong> Tournament usually held at <strong>Solanco</strong></li>
+                </ul>
+            </div>
+
+            <!-- VOLUNTEER ENCOURAGEMENT (ABOVE SIGNUPS) -->
+            <div class="callout">
+                <h3 class="info-title">Volunteer Coaches Needed</h3>
+                <p>
+                    Our recreational program depends on parent volunteers to form teams.
+                    <strong>Most of our coaches start with little or no soccer experience</strong>—the league can provide drills,
+                    practice ideas, and support to help you get started.
+                </p>
+                <p class="muted" style="margin-top: 8px;">
+                    <strong>Tip:</strong> If two parents volunteer as co-coaches, responsibilities can be shared.
+                </p>
+                <p class="muted" style="margin-top: 8px;">
+                    Teams cannot be formed without volunteer coaches. If we do not have enough coaches, some players may be placed on a waiting list.
+                </p>
+            </div>
+
+            <!-- SHORT LABEL ABOVE THE LIST -->
+            <p class="helper-text">Sign up below. (Scroll for full details.)</p>
+
+            <!-- Your existing status + list -->
             <p id="sync-status" class="sync-status" data-type="info">Checking shared storage...</p>
             <div id="public-event-list" class="stack"></div>
+
+            <!-- FULL DETAILS (BOTTOM) -->
+            <details class="details-block">
+                <summary>More information (coaching roles & responsibilities)</summary>
+
+                <div class="details-inner">
+                    <h4>Head Coach Responsibilities</h4>
+                    <ul>
+                        <li>Parent communications about schedule changes, uniforms, and team updates</li>
+                        <li>Organizing and running practices</li>
+                        <li>Contacting the opposing coach prior to the game to confirm details</li>
+                        <li>Providing payment to the referee for home games</li>
+                        <li>Entering game scores online</li>
+                    </ul>
+
+                    <h4>Assistant Coach Responsibilities</h4>
+                    <ul>
+                        <li>Supporting the head coach during practices and games</li>
+                        <li>Fulfilling head coach duties when the head coach is not present</li>
+                        <li>Helping keep players on task and engaged</li>
+                    </ul>
+
+                    <h4>Schedule Details</h4>
+                    <ul>
+                        <li><strong>Practices:</strong> Tuesday & Thursday, 6:00–7:30 PM (U8 / U6 typically end at 7:00)</li>
+                        <li><strong>Games:</strong> Saturdays within Lancaster County (usually mornings, some afternoons)</li>
+                        <li><strong>U8 / U6 Games:</strong> Home games on Thursdays during normal practice time</li>
+                        <li><strong>End-of-season:</strong> Tournament at Solanco</li>
+                    </ul>
+                </div>
+            </details>
+
         </section>
     </main>
 
