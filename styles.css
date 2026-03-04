@@ -121,6 +121,22 @@ fieldset {
     margin: 0;
 }
 
+.drag-handle {
+  cursor: grab;
+  user-select: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+  line-height: 1;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.drag-ghost {
+  opacity: 0.5;
+}
+
 .info-block {
   margin: 12px 0 16px;
 }
