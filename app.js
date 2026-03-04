@@ -147,7 +147,7 @@ function setupStorageDiagnostics() {
         try {
             const events = await loadEvents();
             isApiOnline = true;
-            setSyncStatus(`Shared storage connected (${storageLabel}). Events and signups are visible to all users.`, "ok");
+            setSyncStatus(`Shared storage connected (${storageLabel}).`, "ok");
             setActionStatus(`Connection OK. Loaded ${events.length} event(s).`, "ok");
 
             if (document.body.dataset.page === "create") {
@@ -611,7 +611,7 @@ async function init() {
     try {
         await loadEvents();
         isApiOnline = true;
-        setSyncStatus(`Shared storage connected (${storageLabel}). Events and signups are visible to all users.`, "ok");
+        setSyncStatus(`Shared storage connected (${storageLabel}).`, "ok");
     } catch {
         handleApiOffline();
     }
