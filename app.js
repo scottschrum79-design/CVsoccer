@@ -7,6 +7,47 @@ const storageLabel = googleScriptUrl ? "Google Sheets" : "server storage";
 let spinnerStartTime = 0;
 const MIN_SPINNER_TIME = 3000; // 2 seconds
 
+let adminSortable = null;
+
+function initAdminDragAndDrop() {
+    const adminContainer = document.getElementById("admin-event-list");
+    if (!adminContainer) return;
+
+    // If we re-render, destroy the old sortable instance
+    if (adminSortable) {
+        adminSortable.destroy();
+        adminSortable = null;
+    }
+
+    adminSortable = new Sortable(adminContainer, {
+        animation: 150,
+        handle: ".drag-handle",
+        draggable: ".event-item",
+        ghostClass: "drag-ghost",
+
+        onEnd: async () => {
+            const orderedIds = Array.from(
+                adminContainer.querySelectorAll(".event-item")
+            ).map(el => el.dataset.eventId);
+
+            const events = await loadEvents();
+            const byId = new Map(events.map(e => [String(e.id), e]));
+
+            // Assign order based on current DOM order
+            orderedIds.forEach((id, idx) => {
+                const e = byId.get(String(id));
+                if (e) e.order = idx;
+            });
+
+            await saveEvents(events);
+
+            // Optional: re-render to ensure order is consistent everywhere
+            await renderAdminPage();
+        }
+    });
+}
+
+
 function showLoading(message = "Updating…") {
     const overlay = document.getElementById("loadingOverlay");
     if (!overlay) return;
@@ -359,7 +400,20 @@ async function renderAdminPage() {
         return;
     }
 
-    const events = (await loadEvents()).sort((a, b) => a.date.localeCompare(b.date));
+    let events = await loadEvents();
+
+    // If old events don’t have an order yet, give them one (based on date sort)
+    if (events.some(e => e.order == null)) {
+        events
+            .sort((a, b) => a.date.localeCompare(b.date))
+            .forEach((e, i) => (e.order = i));
+        await saveEvents(events);
+    }
+
+    // Now render by saved order
+    events = events.sort((a, b) => Number(a.order) - Number(b.order));
+
+
     adminContainer.innerHTML = "";
 
     if (!events.length) {
@@ -369,7 +423,8 @@ async function renderAdminPage() {
 
     events.forEach((event) => {
         const wrapper = document.createElement("article");
-        wrapper.className = "event";
+        wrapper.className = "event event-item";
+        wrapper.dataset.eventId = event.id;
 
         const slotsHtml = event.slots
             .map((slot) => {
@@ -421,14 +476,15 @@ async function renderAdminPage() {
             .join("");
 
         wrapper.innerHTML = `
-      <div class="event-head">
-        <h3>${event.title}</h3>
-        <button type="button" class="danger remove-event" data-event-id="${event.id}">Remove event</button>
-      </div>
-      <div class="event-meta">${formatDate(event.date)}</div>
-      <p>${event.description || "No description provided."}</p>
-      ${slotsHtml}
-    `;
+  <div class="event-head">
+    <span class="drag-handle" title="Drag to reorder" aria-label="Drag to reorder">☰</span>
+    <h3>${event.title}</h3>
+    <button type="button" class="danger remove-event" data-event-id="${event.id}">Remove event</button>
+  </div>
+  <div class="event-meta">${formatDate(event.date)}</div>
+  <p>${event.description || "No description provided."}</p>
+  ${slotsHtml}
+`;
 
         wrapper.querySelector(".remove-event")?.addEventListener("click", async () => {
             const shouldRemove = window.confirm("Remove this event and all signups?");
@@ -464,6 +520,7 @@ async function renderAdminPage() {
 
         adminContainer.appendChild(wrapper);
     });
+    initAdminDragAndDrop();
 }
 
 function initCreatePage() {
@@ -500,13 +557,19 @@ function initCreatePage() {
             ensureOnline();         // if this throws, finally still runs
 
             const events = await loadEvents();
-            events.push({ id: uid(), title, description, date, slots });
+
+            // NEW: assign a stable order so drag/drop can persist
+            const nextOrder =
+                events.reduce((max, e) => Math.max(max, Number(e.order ?? -1)), -1) + 1;
+
+            events.push({ id: uid(), title, description, date, slots, order: nextOrder });
+
             await saveEvents(events);
 
             eventForm.reset();
             slotInputs.innerHTML = "";
-            createSlotInput(slotInputs, slotTemplate, "Example: Snack table", 2);
-            createSlotInput(slotInputs, slotTemplate, "Example: Cleanup", 1);
+            createSlotInput(slotInputs, slotTemplate, "HEAD COACH", 2);
+            createSlotInput(slotInputs, slotTemplate, "Assistant Coach", 4);
 
             setActionStatus("Event created and shared successfully.", "ok");
 
