@@ -208,6 +208,24 @@ fieldset {
         margin: 0;
     }
 
+.modal::backdrop { background: rgba(0,0,0,0.4); }
+
+.modal-card {
+  border: 0;
+  padding: 16px;
+  min-width: min(520px, 92vw);
+}
+
+.modal-card label { display:block; margin: 10px 0; }
+.modal-card input, .modal-card textarea { width: 100%; }
+
+.modal-actions {
+  display:flex;
+  justify-content:flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
 .event-meta {
     color: #627089;
     font-size: 0.9rem;
