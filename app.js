@@ -346,7 +346,7 @@ async function renderPublicSignupPage() {
 
         wrapper.innerHTML = `
       <h3>${event.title}</h3>
-      <div class="event-meta">"Teams due by "${formatDate(event.date)}</div>
+      <div class="event-meta">Teams due by ${formatDate(event.date)}</div>
       <p>${event.description || "No description provided."}</p>
       <div class="slots-wrap"></div>
     `;
