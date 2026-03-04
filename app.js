@@ -346,7 +346,7 @@ async function renderPublicSignupPage() {
 
         wrapper.innerHTML = `
       <h3>${event.title}</h3>
-      <div class="event-meta">${formatDate(event.date)}</div>
+      <div class="event-meta">"Teams due by "${formatDate(event.date)}</div>
       <p>${event.description || "No description provided."}</p>
       <div class="slots-wrap"></div>
     `;
@@ -582,8 +582,8 @@ function initCreatePage() {
 
             eventForm.reset();
             slotInputs.innerHTML = "";
-            createSlotInput(slotInputs, slotTemplate, "HEAD COACH", 2);
-            createSlotInput(slotInputs, slotTemplate, "Assistant Coach", 4);
+            createSlotInput(slotInputs, slotTemplate, "Head Coach", 3);
+            createSlotInput(slotInputs, slotTemplate, "Assistant Coach", 6);
 
             setActionStatus("Event created and shared successfully.", "ok");
 
@@ -601,8 +601,8 @@ function initCreatePage() {
         }
     });
 
-    createSlotInput(slotInputs, slotTemplate, "Example: Snack table", 2);
-    createSlotInput(slotInputs, slotTemplate, "Example: Cleanup", 1);
+    createSlotInput(slotInputs, slotTemplate, "Head Coach", 3);
+    createSlotInput(slotInputs, slotTemplate, "Assistant Coach", 6);
 }
 
 async function init() {
