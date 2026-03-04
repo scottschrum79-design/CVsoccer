@@ -181,6 +181,46 @@ async function loadEvents() {
     return Array.isArray(payload.events) ? payload.events : [];
 }
 
+
+function openEditEventDialog(eventObj) {
+    const dialog = document.getElementById("editEventDialog");
+    const form = document.getElementById("editEventForm");
+
+    form.eventId.value = eventObj.id;
+    form.title.value = eventObj.title || "";
+    form.date.value = eventObj.date || "";
+    form.description.value = eventObj.description || "";
+
+    dialog.showModal();
+}
+
+async function saveEditedEventFromDialog() {
+    const dialog = document.getElementById("editEventDialog");
+    const form = document.getElementById("editEventForm");
+
+    const eventId = String(form.eventId.value);
+    const title = String(form.title.value || "").trim();
+    const date = String(form.date.value || "").trim();
+    const description = String(form.description.value || "").trim();
+
+    const events = await loadEvents();
+    const idx = events.findIndex(e => String(e.id) === eventId);
+    if (idx === -1) throw new Error("Event not found");
+
+    // Update allowed fields
+    events[idx].title = title;
+    events[idx].date = date;
+    events[idx].description = description;
+
+    await saveEvents(events);
+    dialog.close();
+
+    // Refresh admin + public list if present
+    await renderAdminPage();
+    if (typeof renderPublicSignupPage === "function") {
+        await renderPublicSignupPage();
+    }
+}
 async function saveEvents(events) {
     const payload = JSON.stringify({ events });
 
@@ -493,8 +533,18 @@ async function renderAdminPage() {
   <div class="event-head">
     <span class="drag-handle" title="Drag to reorder" aria-label="Drag to reorder">☰</span>
     <h3>${event.title}</h3>
-    <button type="button" class="danger remove-event" data-event-id="${event.id}">Remove event</button>
+
+    <div class="event-actions">
+      <button type="button" class="small edit-event" data-event-id="${event.id}">
+        Edit
+      </button>
+
+      <button type="button" class="danger remove-event" data-event-id="${event.id}">
+        Remove event
+      </button>
+    </div>
   </div>
+
   <div class="event-meta">${formatDate(event.date)}</div>
   <p>${event.description || "No description provided."}</p>
   ${slotsHtml}
@@ -508,6 +558,19 @@ async function renderAdminPage() {
                 await removeEvent(event.id);
                 await renderAdminPage();
             } catch {
+                handleApiOffline();
+                showOfflineMessage(adminContainer);
+            }
+        });
+
+        wrapper.querySelector(".edit-event")?.addEventListener("click", async () => {
+            try {
+                const events = await loadEvents();
+                const fresh = events.find(e => String(e.id) === String(event.id));
+                if (!fresh) return;
+                openEditEventDialog(fresh);
+            } catch (err) {
+                console.error("Open edit dialog failed:", err);
                 handleApiOffline();
                 showOfflineMessage(adminContainer);
             }
@@ -605,6 +668,36 @@ function initCreatePage() {
     createSlotInput(slotInputs, slotTemplate, "Assistant Coach", 6);
 }
 
+function initEditEventModal() {
+    const dialog = document.getElementById("editEventDialog");
+    const form = document.getElementById("editEventForm");
+    const cancelBtn = document.getElementById("editCancelBtn");
+
+    if (!dialog || !form || !cancelBtn) return;
+
+    cancelBtn.addEventListener("click", () => dialog.close());
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        showLoading("Saving changes...");
+        try {
+            await nextPaint();
+            ensureOnline();
+            await saveEditedEventFromDialog();
+            setActionStatus("Event updated successfully.", "ok");
+        } catch (err) {
+            console.error("Edit event failed:", err);
+            handleApiOffline();
+            setActionStatus("Could not update event because shared storage is offline.", "error");
+            showOfflineMessage(document.getElementById("admin-event-list"));
+        } finally {
+            hideLoading();
+        }
+    });
+}
+
+
 async function init() {
     setupStorageDiagnostics();
 
@@ -620,6 +713,7 @@ async function init() {
 
     if (currentPage === "create") {
         initCreatePage();
+        initEditEventModal();   // ✅ wire dialog once
         await renderAdminPage();
         return;
     }

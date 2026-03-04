@@ -64,6 +64,34 @@
         <div class="loading-text">Updating...</div>
     </div>
 
+    <dialog id="editEventDialog" class="modal">
+        <form method="dialog" id="editEventForm" class="modal-card">
+            <h3>Edit event</h3>
+
+            <label>
+                Title
+                <input name="title" required />
+            </label>
+
+            <label>
+                Date
+                <input name="date" type="date" required />
+            </label>
+
+            <label>
+                Description
+                <textarea name="description" rows="4"></textarea>
+            </label>
+
+            <input type="hidden" name="eventId" />
+
+            <div class="modal-actions">
+                <button value="cancel" type="button" id="editCancelBtn">Cancel</button>
+                <button value="save" type="submit" class="primary" id="editSaveBtn">Save changes</button>
+            </div>
+        </form>
+    </dialog>
+
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.7/Sortable.min.js"></script>
     <script src="config.js"></script>
     <script src="app.js"></script>
