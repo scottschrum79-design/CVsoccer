@@ -185,11 +185,51 @@ async function loadEvents() {
 function openEditEventDialog(eventObj) {
     const dialog = document.getElementById("editEventDialog");
     const form = document.getElementById("editEventForm");
+    const slotsWrap = document.getElementById("editSlotsWrap");
 
     form.eventId.value = eventObj.id;
     form.title.value = eventObj.title || "";
     form.date.value = eventObj.date || "";
     form.description.value = eventObj.description || "";
+
+    // Build editable slot rows
+    slotsWrap.innerHTML = "";
+    (eventObj.slots || []).forEach((slot) => {
+        const claimed = (slot.claimedBy || []).length;
+        const row = document.createElement("div");
+        row.className = "edit-slot-row";
+        row.dataset.slotId = slot.id;
+
+        const min = claimed; // cannot go below existing signups
+
+        row.innerHTML = `
+      <div>
+        <label>
+          Slot name
+          <input class="slot-name" value="${slot.name ?? ""}" required />
+        </label>
+        <small>${claimed} already signed up</small>
+      </div>
+
+      <label>
+        Needed
+        <input class="slot-count" type="number" min="${min}" step="1" value="${slot.count ?? 1}" required />
+      </label>
+
+      <button type="button"
+              class="danger small remove-slot"
+              ${claimed > 0 ? "disabled title='Cannot remove a slot with signups'" : ""}>
+        Remove
+      </button>
+    `;
+
+        row.querySelector(".remove-slot").addEventListener("click", () => {
+            if (claimed > 0) return;
+            row.remove();
+        });
+
+        slotsWrap.appendChild(row);
+    });
 
     dialog.showModal();
 }
@@ -197,6 +237,7 @@ function openEditEventDialog(eventObj) {
 async function saveEditedEventFromDialog() {
     const dialog = document.getElementById("editEventDialog");
     const form = document.getElementById("editEventForm");
+    const slotsWrap = document.getElementById("editSlotsWrap");
 
     const eventId = String(form.eventId.value);
     const title = String(form.title.value || "").trim();
@@ -207,20 +248,46 @@ async function saveEditedEventFromDialog() {
     const idx = events.findIndex(e => String(e.id) === eventId);
     if (idx === -1) throw new Error("Event not found");
 
-    // Update allowed fields
-    events[idx].title = title;
-    events[idx].date = date;
-    events[idx].description = description;
+    const existingEvent = events[idx];
+    const existingSlots = existingEvent.slots || [];
+    const bySlotId = new Map(existingSlots.map(s => [String(s.id), s]));
+
+    // Build new slots array from dialog rows
+    const rows = Array.from(slotsWrap.querySelectorAll(".edit-slot-row"));
+    const updatedSlots = rows.map((row) => {
+        const slotId = String(row.dataset.slotId);
+        const name = String(row.querySelector(".slot-name")?.value || "").trim();
+        const count = Number.parseInt(String(row.querySelector(".slot-count")?.value || "1"), 10);
+
+        const prev = bySlotId.get(slotId);
+
+        // Preserve claimedBy for existing slots; new slots start empty
+        const claimedBy = prev?.claimedBy || [];
+        const min = claimedBy.length;
+
+        return {
+            id: prev?.id || slotId,
+            name,
+            count: Math.max(count, min), // enforce safety rule
+            claimedBy
+        };
+    });
+
+    // Update event fields
+    existingEvent.title = title;
+    existingEvent.date = date;
+    existingEvent.description = description;
+    existingEvent.slots = updatedSlots;
 
     await saveEvents(events);
     dialog.close();
 
-    // Refresh admin + public list if present
     await renderAdminPage();
     if (typeof renderPublicSignupPage === "function") {
         await renderPublicSignupPage();
     }
 }
+
 async function saveEvents(events) {
     const payload = JSON.stringify({ events });
 
@@ -672,8 +739,39 @@ function initEditEventModal() {
     const dialog = document.getElementById("editEventDialog");
     const form = document.getElementById("editEventForm");
     const cancelBtn = document.getElementById("editCancelBtn");
+    const addSlotBtn = document.getElementById("editAddSlotBtn");
+    const slotsWrap = document.getElementById("editSlotsWrap");
 
     if (!dialog || !form || !cancelBtn) return;
+
+    // Wire "Add slot" button (once)
+    if (addSlotBtn && slotsWrap) {
+        addSlotBtn.addEventListener("click", () => {
+            const row = document.createElement("div");
+            row.className = "edit-slot-row";
+            row.dataset.slotId = uid(); // new slot id
+
+            row.innerHTML = `
+      <div>
+        <label>
+          Slot name
+          <input class="slot-name" value="" placeholder="e.g., Head Coach" required />
+        </label>
+        <small>0 already signed up</small>
+      </div>
+
+      <label>
+        Needed
+        <input class="slot-count" type="number" min="1" step="1" value="1" required />
+      </label>
+
+      <button type="button" class="danger small remove-slot">Remove</button>
+    `;
+
+            row.querySelector(".remove-slot").addEventListener("click", () => row.remove());
+            slotsWrap.appendChild(row);
+        });
+    }
 
     cancelBtn.addEventListener("click", () => dialog.close());
 
