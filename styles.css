@@ -121,6 +121,49 @@ fieldset {
     margin: 0;
 }
 
+.info-block {
+  margin: 12px 0 16px;
+}
+
+.info-title {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+
+.info-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.muted {
+  opacity: 0.75;
+}
+
+.callout {
+  margin: 12px 0 16px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: rgba(0,0,0,0.03);
+}
+
+.details-block {
+  margin-top: 16px;
+}
+
+.details-block summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.details-inner {
+  margin-top: 12px;
+}
+
+.details-inner h4 {
+  margin: 14px 0 6px;
+}
+
 .slot-row {
     display: grid;
     gap: 0.5rem;
