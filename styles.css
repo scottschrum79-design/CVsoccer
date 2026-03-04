@@ -229,6 +229,26 @@ fieldset {
   min-width: min(520px, 92vw);
 }
 
+.edit-slots{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin:10px 0 14px;
+}
+
+.edit-slot-row{
+  display:grid;
+  grid-template-columns: 1fr 120px auto;
+  gap:10px;
+  align-items:center;
+}
+
+.edit-slot-row small{
+  opacity:0.75;
+}
+
+
+
 .modal-card label { display:block; margin: 10px 0; }
 .modal-card input, .modal-card textarea { width: 100%; }
 
