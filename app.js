@@ -318,13 +318,27 @@ async function renderPublicSignupPage() {
         return;
     }
 
-    const events = (await loadEvents()).sort((a, b) => a.date.localeCompare(b.date));
+    let events = await loadEvents();
+
+    // Backfill order for older events (first run only)
+    if (events.some(e => e.order == null)) {
+        events
+            .sort((a, b) => a.date.localeCompare(b.date))
+            .forEach((e, i) => (e.order = i));
+        await saveEvents(events);
+    }
+
+    // Use saved custom order
+    events = events.sort((a, b) => Number(a.order) - Number(b.order));
+
     container.innerHTML = "";
 
     if (!events.length) {
         container.innerHTML = `<p class="empty">No events available yet.</p>`;
         return;
     }
+
+    // ... keep the rest of your existing forEach rendering exactly as-is
 
     events.forEach((event) => {
         const wrapper = document.createElement("article");
