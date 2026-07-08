@@ -1,0 +1,68 @@
+const creatorConfig = window.TEAMSIGNUPS_CONFIG || {};
+const creatorPassword = typeof creatorConfig.creatorPassword === "string" ? creatorConfig.creatorPassword : "";
+const sessionKey = "teamsignupsCreatorUnlocked";
+
+function loadCreatorApp() {
+    const script = document.createElement("script");
+    script.src = "app.js";
+    document.body.appendChild(script);
+}
+
+function showCreatorContent() {
+    const login = document.getElementById("creator-login");
+    const content = document.getElementById("creator-content");
+
+    if (login) login.hidden = true;
+    if (content) content.hidden = false;
+
+    loadCreatorApp();
+}
+
+function setAuthMessage(message, type = "error") {
+    const status = document.getElementById("creator-auth-status");
+    if (!status) return;
+
+    status.hidden = !message;
+    status.textContent = message;
+    status.dataset.type = type;
+}
+
+function initCreatorAuth() {
+    const form = document.getElementById("creator-auth-form");
+    const passwordInput = document.getElementById("creator-password");
+
+    if (!form || !passwordInput) {
+        loadCreatorApp();
+        return;
+    }
+
+    if (!creatorPassword) {
+        setAuthMessage("Creator password is not set in config.js.");
+        return;
+    }
+
+    if (sessionStorage.getItem(sessionKey) === "true") {
+        showCreatorContent();
+        return;
+    }
+
+    form.addEventListener("submit", (event) => {
+        event.preventDefault();
+
+        if (passwordInput.value === creatorPassword) {
+            sessionStorage.setItem(sessionKey, "true");
+            passwordInput.value = "";
+            setAuthMessage("");
+            showCreatorContent();
+            return;
+        }
+
+        passwordInput.value = "";
+        passwordInput.focus();
+        setAuthMessage("Incorrect password. Please try again.");
+    });
+
+    passwordInput.focus();
+}
+
+initCreatorAuth();
