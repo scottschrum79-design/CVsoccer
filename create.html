@@ -16,7 +16,21 @@
         </nav>
     </header>
 
-    <main class="layout">
+    <main id="creator-login" class="layout creator-login">
+        <section class="card">
+            <h2>Creator access</h2>
+            <form id="creator-auth-form" class="stack">
+                <label>
+                    Password
+                    <input id="creator-password" type="password" autocomplete="current-password" required />
+                </label>
+                <button type="submit">Unlock creator page</button>
+                <p id="creator-auth-status" class="creator-auth-status" data-type="error" hidden></p>
+            </form>
+        </section>
+    </main>
+
+    <main id="creator-content" class="layout" hidden>
         <section class="card">
             <h2>Create an event</h2>
             <form id="event-form" class="stack">
@@ -101,6 +115,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.7/Sortable.min.js"></script>
     <script src="config.js"></script>
-    <script src="app.js"></script>
+    <script src="creator-auth.js"></script>
 </body>
 </html>
