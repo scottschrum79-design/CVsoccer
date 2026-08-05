@@ -2,22 +2,35 @@
     const container = document.getElementById("public-event-list");
     if (!container) return;
 
+    function readFillStatus(slotNode) {
+        const status = slotNode.querySelector("small");
+        if (!status) return null;
+
+        const match = status.textContent.match(/(\d+)\s*\/\s*(\d+)\s*filled/i);
+        if (!match) return null;
+
+        const filled = Number(match[1]);
+        const needed = Number(match[2]);
+        return {
+            filled,
+            needed,
+            isFull: needed > 0 && filled >= needed
+        };
+    }
+
     function enhanceFilledPositions() {
         container.querySelectorAll(".slot").forEach((slotNode) => {
+            const fillStatus = readFillStatus(slotNode);
+            if (!fillStatus || !fillStatus.isFull) return;
             if (slotNode.dataset.fullPositionEnhanced === "true") return;
 
-            const status = slotNode.querySelector("small");
             const form = slotNode.querySelector(".signup-form");
             const button = form?.querySelector("button");
+            const status = slotNode.querySelector("small");
 
-            if (!status || !form || !button) return;
+            if (!form || !button || !status) return;
 
-            const match = status.textContent.match(/(\d+)\s*\/\s*(\d+)\s*filled/i);
-            if (!match) return;
-
-            const filled = Number(match[1]);
-            const needed = Number(match[2]);
-            if (needed <= 0 || filled < needed) return;
+            const { filled, needed } = fillStatus;
 
             slotNode.dataset.fullPositionEnhanced = "true";
             slotNode.classList.add("position-full");
@@ -61,9 +74,42 @@
         });
     }
 
-    enhanceFilledPositions();
+    function moveOpenPositionsFirst() {
+        container.querySelectorAll(".slots-wrap").forEach((slotsWrap) => {
+            const slots = Array.from(slotsWrap.querySelectorAll(":scope > .slot"));
+            if (slots.length < 2) return;
 
-    const observer = new MutationObserver(() => enhanceFilledPositions());
+            const sortedSlots = slots
+                .map((slot, index) => ({
+                    slot,
+                    index,
+                    isFull: readFillStatus(slot)?.isFull === true
+                }))
+                .sort((a, b) => {
+                    if (a.isFull !== b.isFull) return a.isFull ? 1 : -1;
+                    return a.index - b.index;
+                });
+
+            sortedSlots.forEach(({ slot }) => slotsWrap.appendChild(slot));
+        });
+    }
+
+    let enhancementScheduled = false;
+
+    function scheduleEnhancement() {
+        if (enhancementScheduled) return;
+        enhancementScheduled = true;
+
+        window.requestAnimationFrame(() => {
+            enhancementScheduled = false;
+            enhanceFilledPositions();
+            moveOpenPositionsFirst();
+        });
+    }
+
+    scheduleEnhancement();
+
+    const observer = new MutationObserver(scheduleEnhancement);
     observer.observe(container, {
         childList: true,
         subtree: true
