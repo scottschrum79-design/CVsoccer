@@ -1,0 +1,61 @@
+.position-full {
+    background: #fff4f4;
+    border-color: #efb0b0;
+    box-shadow: inset 4px 0 0 #d9534f;
+    padding: 0.8rem;
+}
+
+.position-full > div:first-child {
+    display: grid;
+    gap: 0.3rem;
+}
+
+.position-full strong {
+    color: #8e2e2e;
+}
+
+.position-full small {
+    color: #a14b4b;
+    font-weight: 700;
+}
+
+.filled-volunteer-summary {
+    margin-top: 0.65rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid #f0c7c7;
+}
+
+.filled-volunteer-heading {
+    margin-bottom: 0.35rem;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #7a3131;
+}
+
+.filled-volunteer-summary ul {
+    margin: 0;
+    padding-left: 1.35rem;
+    color: #6d3b3b;
+}
+
+.filled-volunteer-summary li {
+    margin: 0.15rem 0;
+}
+
+.signup-form-full {
+    margin-top: 0.7rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid #f0c7c7;
+}
+
+.btn-full,
+button.btn-full:disabled,
+button.btn-full:disabled:hover {
+    background: #df7777;
+    color: #ffffff;
+    border: 1px solid #cf6666;
+    cursor: not-allowed;
+    opacity: 0.72;
+    box-shadow: none;
+    transform: none;
+}
