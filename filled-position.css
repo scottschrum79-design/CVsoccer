@@ -59,3 +59,66 @@ button.btn-full:disabled:hover {
     box-shadow: none;
     transform: none;
 }
+
+.sync-status.is-loading {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.85rem 1rem;
+    background: #eef3ff;
+    color: #244a9f;
+    border: 1px solid #cfddff;
+    animation: loading-status-pulse 1.8s ease-in-out infinite;
+}
+
+.loading-status-title {
+    display: block;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.loading-status-note {
+    display: block;
+    color: #53698f;
+    font-size: 0.88rem;
+    font-style: italic;
+    line-height: 1.35;
+}
+
+.loading-dots::after {
+    display: inline-block;
+    width: 1.5em;
+    overflow: hidden;
+    vertical-align: bottom;
+    content: "...";
+    animation: loading-dots 1.4s steps(4, end) infinite;
+}
+
+@keyframes loading-dots {
+    0% {
+        width: 0;
+    }
+
+    100% {
+        width: 1.5em;
+    }
+}
+
+@keyframes loading-status-pulse {
+    0%,
+    100% {
+        opacity: 1;
+        box-shadow: 0 0 0 rgba(50, 92, 218, 0);
+    }
+
+    50% {
+        opacity: 0.72;
+        box-shadow: 0 0 12px rgba(50, 92, 218, 0.12);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sync-status.is-loading,
+    .loading-dots::after {
+        animation: none;
+    }
+}
