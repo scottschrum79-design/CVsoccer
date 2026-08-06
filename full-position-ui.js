@@ -76,10 +76,10 @@
 
     function moveOpenPositionsFirst() {
         container.querySelectorAll(".slots-wrap").forEach((slotsWrap) => {
-            const slots = Array.from(slotsWrap.querySelectorAll(":scope > .slot"));
-            if (slots.length < 2) return;
+            const currentSlots = Array.from(slotsWrap.querySelectorAll(":scope > .slot"));
+            if (currentSlots.length < 2) return;
 
-            const sortedSlots = slots
+            const sortedSlots = currentSlots
                 .map((slot, index) => ({
                     slot,
                     index,
@@ -88,9 +88,13 @@
                 .sort((a, b) => {
                     if (a.isFull !== b.isFull) return a.isFull ? 1 : -1;
                     return a.index - b.index;
-                });
+                })
+                .map(({ slot }) => slot);
 
-            sortedSlots.forEach(({ slot }) => slotsWrap.appendChild(slot));
+            const orderChanged = sortedSlots.some((slot, index) => slot !== currentSlots[index]);
+            if (!orderChanged) return;
+
+            sortedSlots.forEach((slot) => slotsWrap.appendChild(slot));
         });
     }
 
