@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CV Soccer | Volunteer Signup</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="filled-position.css" />
 </head>
 <body data-page="signup">
     <header class="topbar">
@@ -20,7 +21,6 @@
         <section class="card">
             <h2>Fall 2026 Season</h2>
 
-            <!-- QUICK SUMMARY (TOP) -->
             <div class="info-block">
                 <h3 class="info-title">Season Overview</h3>
                 <ul class="info-list">
@@ -31,31 +31,24 @@
                 </ul>
             </div>
 
-            <!-- VOLUNTEER ENCOURAGEMENT (ABOVE SIGNUPS) -->
             <div class="callout">
-                
                 <p>
                     Our recreational program depends on parent volunteers to form teams.
                     <strong>Most of our coaches start with little or no soccer experience</strong>—the league can provide drills,
                     practice ideas, and support to help you get started.
                 </p>
-               
                 <p class="muted" style="margin-top: 8px;">
                     Teams must be submitted and approved by the league by the dates below. If we do not have enough coaches, some players may be placed on a waiting list.
                 </p>
             </div>
 
-            <!-- SHORT LABEL ABOVE THE LIST -->
             <p class="helper-text">Sign up below. (Scroll for full details.)</p>
 
-            <!-- Your existing status + list -->
             <p id="sync-status" class="sync-status" data-type="info">Checking shared storage...</p>
             <div id="public-event-list" class="stack"></div>
 
-            <!-- FULL DETAILS (BOTTOM) -->
             <details class="details-block">
                 <summary>More information (coaching roles & responsibilities)</summary>
-
                 <div class="details-inner">
                     <h4>Head Coach Responsibilities</h4>
                     <ul>
@@ -82,7 +75,6 @@
                     </ul>
                 </div>
             </details>
-
         </section>
     </main>
 
@@ -91,8 +83,10 @@
         <div class="loading-text">Updating...</div>
     </div>
 
-
     <script src="config.js"></script>
+    <script src="loading-status.js"></script>
     <script src="app.js"></script>
+    <script src="ui-reconnect.js"></script>
+    <script src="full-position-ui.js"></script>
 </body>
 </html>
