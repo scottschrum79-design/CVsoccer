@@ -85,5 +85,21 @@
 
     <script src="config.js"></script>
     <script src="app.js"></script>
+    <script>
+        (() => {
+            const originalRender = window.renderPublicSignupPage;
+            if (typeof originalRender !== "function") return;
+
+            window.renderPublicSignupPage = async function (...args) {
+                const active = document.activeElement;
+                const isTypingInSignup =
+                    active instanceof HTMLInputElement &&
+                    active.closest("#public-event-list .signup-form");
+
+                if (isTypingInSignup) return;
+                return originalRender.apply(this, args);
+            };
+        })();
+    </script>
 </body>
 </html>
