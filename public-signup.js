@@ -89,30 +89,35 @@
             (event.slots || []).forEach((slot) => {
                 const claimedBy = Array.isArray(slot.claimedBy) ? slot.claimedBy : [];
                 const remaining = Number(slot.count || 0) - claimedBy.length;
+                const isFull = remaining <= 0;
                 const slotNode = document.createElement("div");
-                slotNode.className = "slot";
+                slotNode.className = isFull ? "slot position-full" : "slot";
 
                 const names = claimedBy.map((person) => person.publicName).filter(Boolean).join(", ");
-                slotNode.innerHTML = `
-                    <div>
-                        <strong>${slot.name}</strong><br />
-                        <small>${claimedBy.length}/${slot.count} filled</small>
-                        ${names ? `<p class="signed-up-list">Signed up: ${names}</p>` : ""}
-                    </div>
+                const signupForm = isFull ? "" : `
                     <form class="signup-form">
                         <div class="fields-grid">
-                            <input name="firstName" placeholder="First name" ${remaining <= 0 ? "disabled" : "required"} />
-                            <input name="lastName" placeholder="Last name" ${remaining <= 0 ? "disabled" : "required"} />
-                            <input name="email" type="email" placeholder="Email" ${remaining <= 0 ? "disabled" : "required"} />
-                            <input name="phone" placeholder="Phone" ${remaining <= 0 ? "disabled" : "required"} />
-                            <input name="notes" placeholder="Any notes (optional)" ${remaining <= 0 ? "disabled" : ""} />
+                            <input name="firstName" placeholder="First name" required />
+                            <input name="lastName" placeholder="Last name" required />
+                            <input name="email" type="email" placeholder="Email" required />
+                            <input name="phone" placeholder="Phone" required />
+                            <input name="notes" placeholder="Any notes (optional)" />
                         </div>
-                        <button type="submit" ${remaining <= 0 ? "disabled" : ""}>${remaining <= 0 ? "Full" : "Sign up"}</button>
+                        <button type="submit">Sign up</button>
                     </form>
                 `;
 
+                slotNode.innerHTML = `
+                    <div>
+                        <strong>${slot.name}</strong><br />
+                        <small>${isFull ? "FULL" : `${claimedBy.length}/${slot.count} filled`}</small>
+                        ${names ? `<p class="signed-up-list">Signed up: ${names}</p>` : ""}
+                    </div>
+                    ${signupForm}
+                `;
+
                 const form = slotNode.querySelector("form");
-                form.addEventListener("submit", async (eventSubmit) => {
+                if (form) form.addEventListener("submit", async (eventSubmit) => {
                     eventSubmit.preventDefault();
                     const formData = new FormData(form);
                     showLoading("Saving signup...");
