@@ -1,10 +1,12 @@
 const creatorConfig = window.TEAMSIGNUPS_CONFIG || {};
 const creatorPassword = typeof creatorConfig.creatorPassword === "string" ? creatorConfig.creatorPassword : "";
 const sessionKey = "teamsignupsCreatorUnlocked";
+const assetVersion = window.TEAMSIGNUPS_ASSET_VERSION || Date.now().toString();
 
 function loadScript(src) {
     const script = document.createElement("script");
-    script.src = src;
+    const separator = src.includes("?") ? "&" : "?";
+    script.src = `${src}${separator}v=${encodeURIComponent(assetVersion)}`;
     document.body.appendChild(script);
     return script;
 }
