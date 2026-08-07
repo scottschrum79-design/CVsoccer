@@ -4,166 +4,30 @@
     const container = document.getElementById("public-event-list");
     const status = document.getElementById("sync-status");
     const overlay = document.getElementById("loadingOverlay");
-
-    if (!container || !endpoint) {
-        if (status) {
-            status.textContent = "Unable to load signup form.";
-            status.dataset.type = "error";
-        }
-        return;
-    }
-
-    function setStatus(message, type = "info") {
-        if (!status) return;
-        status.hidden = !message;
-        status.textContent = message;
-        status.dataset.type = type;
-    }
-
-    function showLoading(message) {
-        if (!overlay) return;
-        const text = overlay.querySelector(".loading-text");
-        if (text) text.textContent = message;
-        overlay.classList.remove("hidden");
-    }
-
-    function hideLoading() {
-        if (overlay) overlay.classList.add("hidden");
-    }
-
-    async function loadEvents() {
-        const response = await fetch(endpoint, { method: "GET", cache: "no-store" });
-        if (!response.ok) throw new Error(`Unable to load events (${response.status})`);
-        const payload = JSON.parse(await response.text());
-        return Array.isArray(payload.events) ? payload.events : [];
-    }
-
-    async function saveEvents(events) {
-        const response = await fetch(endpoint, {
-            method: "POST",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify({ events })
-        });
-        if (!response.ok) throw new Error("Unable to save signup");
-    }
-
-    function formatDate(rawDate) {
-        const date = new Date(`${rawDate}T00:00:00`);
-        return date.toLocaleDateString(undefined, {
-            month: "short",
-            day: "numeric",
-            year: "numeric"
-        });
-    }
-
-    function uid() {
-        return Math.random().toString(36).slice(2, 10);
-    }
-
-    function publicName(firstName, lastName) {
-        const firstInitial = String(firstName || "").trim().charAt(0).toUpperCase();
-        const safeLastName = String(lastName || "").trim();
-        return `${firstInitial}. ${safeLastName}`.trim();
-    }
-
+    if (!container || !endpoint) { if (status) { status.textContent = "Unable to load signup form."; status.dataset.type = "error"; } return; }
+    function setStatus(message, type = "info") { if (!status) return; status.hidden = !message; status.textContent = message; status.dataset.type = type; }
+    function showLoading(message) { if (!overlay) return; const text = overlay.querySelector(".loading-text"); if (text) text.textContent = message; overlay.classList.remove("hidden"); }
+    function hideLoading() { if (overlay) overlay.classList.add("hidden"); }
+    async function loadEvents() { const response = await fetch(endpoint, { method: "GET", cache: "no-store" }); if (!response.ok) throw new Error(`Unable to load events (${response.status})`); const payload = JSON.parse(await response.text()); return Array.isArray(payload.events) ? payload.events : []; }
+    async function saveEvents(events) { const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ events }) }); if (!response.ok) throw new Error("Unable to save signup"); }
+    function formatDate(rawDate) { const date = new Date(`${rawDate}T00:00:00`); return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }); }
+    function uid() { return Math.random().toString(36).slice(2, 10); }
+    function publicName(firstName, lastName) { const firstInitial = String(firstName || "").trim().charAt(0).toUpperCase(); const safeLastName = String(lastName || "").trim(); return `${firstInitial}. ${safeLastName}`.trim(); }
+    function normalizeEmail(value) { return String(value || "").trim().toLowerCase(); }
+    function validEmail(value) { const email = normalizeEmail(value); return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email); }
+    function phoneDigits(value) { let digits = String(value || "").replace(/\D/g, ""); if (digits.length === 11 && digits.startsWith("1")) digits = digits.slice(1); return digits; }
+    function normalizePhone(value) { return phoneDigits(value); }
+    function formatPhone(value) { const digits = phoneDigits(value); if (digits.length !== 10) return null; return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`; }
+    function setupPhoneInput(input) { if (!input) return; input.setAttribute("inputmode", "tel"); input.setAttribute("maxlength", "16"); input.placeholder = "(717) 555-1234"; input.addEventListener("blur", () => { const formatted = formatPhone(input.value); if (formatted) input.value = formatted; }); }
+    function findDuplicate(events, email, phone) { const targetEmail = normalizeEmail(email); const targetPhone = normalizePhone(phone); for (const event of events) for (const slot of (event.slots || [])) for (const person of (slot.claimedBy || [])) { const emailMatch = targetEmail && normalizeEmail(person.email) === targetEmail; const phoneMatch = targetPhone && normalizePhone(person.phone) === targetPhone; if (emailMatch || phoneMatch) return { person, event, slot, emailMatch, phoneMatch }; } return null; }
     function render(events) {
-        container.replaceChildren();
-
-        const sorted = [...events].sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0));
-        if (!sorted.length) {
-            container.innerHTML = '<p class="empty">No events available yet.</p>';
-            return;
-        }
-
-        sorted.forEach((event) => {
-            const article = document.createElement("article");
-            article.className = "event";
-            article.innerHTML = `
-                <h3>${event.title}</h3>
-                <div class="event-meta">Teams due by ${formatDate(event.date)}</div>
-                <p>${event.description || "No description provided."}</p>
-                <div class="slots-wrap"></div>
-            `;
-
-            const slotsWrap = article.querySelector(".slots-wrap");
-            (event.slots || []).forEach((slot) => {
-                const claimedBy = Array.isArray(slot.claimedBy) ? slot.claimedBy : [];
-                const remaining = Number(slot.count || 0) - claimedBy.length;
-                const slotNode = document.createElement("div");
-                slotNode.className = "slot";
-
-                const names = claimedBy.map((person) => person.publicName).filter(Boolean).join(", ");
-                slotNode.innerHTML = `
-                    <div>
-                        <strong>${slot.name}</strong><br />
-                        <small>${claimedBy.length}/${slot.count} filled</small>
-                        ${names ? `<p class="signed-up-list">Signed up: ${names}</p>` : ""}
-                    </div>
-                    <form class="signup-form">
-                        <div class="fields-grid">
-                            <input name="firstName" placeholder="First name" ${remaining <= 0 ? "disabled" : "required"} />
-                            <input name="lastName" placeholder="Last name" ${remaining <= 0 ? "disabled" : "required"} />
-                            <input name="email" type="email" placeholder="Email" ${remaining <= 0 ? "disabled" : "required"} />
-                            <input name="phone" placeholder="Phone" ${remaining <= 0 ? "disabled" : "required"} />
-                            <input name="notes" placeholder="Any notes (optional)" ${remaining <= 0 ? "disabled" : ""} />
-                        </div>
-                        <button type="submit" ${remaining <= 0 ? "disabled" : ""}>${remaining <= 0 ? "Full" : "Sign up"}</button>
-                    </form>
-                `;
-
-                const form = slotNode.querySelector("form");
-                form.addEventListener("submit", async (eventSubmit) => {
-                    eventSubmit.preventDefault();
-                    const formData = new FormData(form);
-                    showLoading("Saving signup...");
-
-                    try {
-                        const latestEvents = await loadEvents();
-                        const latestEvent = latestEvents.find((item) => String(item.id) === String(event.id));
-                        const latestSlot = latestEvent?.slots?.find((item) => String(item.id) === String(slot.id));
-                        if (!latestEvent || !latestSlot) throw new Error("Position no longer exists");
-                        latestSlot.claimedBy = Array.isArray(latestSlot.claimedBy) ? latestSlot.claimedBy : [];
-                        if (latestSlot.claimedBy.length >= Number(latestSlot.count || 0)) {
-                            throw new Error("This position has just been filled");
-                        }
-
-                        const firstName = String(formData.get("firstName") || "").trim();
-                        const lastName = String(formData.get("lastName") || "").trim();
-                        latestSlot.claimedBy.push({
-                            id: uid(),
-                            firstName,
-                            lastName,
-                            email: String(formData.get("email") || "").trim(),
-                            phone: String(formData.get("phone") || "").trim(),
-                            notes: String(formData.get("notes") || "").trim(),
-                            publicName: publicName(firstName, lastName)
-                        });
-
-                        await saveEvents(latestEvents);
-                        setStatus("Thanks for volunteering! Your signup was saved.", "ok");
-                        render(await loadEvents());
-                    } catch (error) {
-                        setStatus(error instanceof Error ? error.message : "Unable to save signup.", "error");
-                    } finally {
-                        hideLoading();
-                    }
-                });
-
-                slotsWrap.appendChild(slotNode);
-            });
-
-            container.appendChild(article);
-        });
+        container.replaceChildren(); const sorted = [...events].sort((a,b) => Number(a.order ?? 0) - Number(b.order ?? 0)); if (!sorted.length) { container.innerHTML = '<p class="empty">No events available yet.</p>'; return; }
+        sorted.forEach((event) => { const article = document.createElement("article"); article.className = "event"; article.innerHTML = `<h3>${event.title}</h3><div class="event-meta">Teams due by ${formatDate(event.date)}</div><p>${event.description || "No description provided."}</p><div class="slots-wrap"></div>`; const slotsWrap = article.querySelector(".slots-wrap");
+            (event.slots || []).forEach((slot) => { const claimedBy = Array.isArray(slot.claimedBy) ? slot.claimedBy : []; const isFull = Number(slot.count || 0) - claimedBy.length <= 0; const slotNode = document.createElement("div"); slotNode.className = isFull ? "slot position-full" : "slot"; const names = claimedBy.map((person) => person.publicName).filter(Boolean).join(", "); const signupForm = isFull ? "" : `<form class="signup-form"><div class="fields-grid"><input name="firstName" placeholder="First name" required /><input name="lastName" placeholder="Last name" required /><input name="email" type="email" placeholder="name@example.com" required /><input name="phone" placeholder="(717) 555-1234" inputmode="tel" maxlength="16" required /><input name="notes" placeholder="Any notes (optional)" /></div><button type="submit">Sign up</button></form>`; slotNode.innerHTML = `<div><strong>${slot.name}</strong><br /><small>${isFull ? "FULL" : `${claimedBy.length}/${slot.count} filled`}</small>${names ? `<p class="signed-up-list">Signed up: ${names}</p>` : ""}</div>${signupForm}`;
+                const form = slotNode.querySelector("form"); if (form) { setupPhoneInput(form.querySelector('input[name="phone"]')); form.addEventListener("submit", async (eventSubmit) => { eventSubmit.preventDefault(); const formData = new FormData(form); const email = normalizeEmail(formData.get("email")); if (!validEmail(email)) { setStatus("Please enter a valid email address, such as name@example.com.", "error"); form.querySelector('input[name="email"]').focus(); return; } const formattedPhone = formatPhone(formData.get("phone")); if (!formattedPhone) { setStatus("Please enter a valid 10-digit U.S. phone number.", "error"); form.querySelector('input[name="phone"]').focus(); return; } showLoading("Saving signup...");
+                        try { const latestEvents = await loadEvents(); const latestEvent = latestEvents.find((item) => String(item.id) === String(event.id)); const latestSlot = latestEvent?.slots?.find((item) => String(item.id) === String(slot.id)); if (!latestEvent || !latestSlot) throw new Error("Position no longer exists"); latestSlot.claimedBy = Array.isArray(latestSlot.claimedBy) ? latestSlot.claimedBy : []; if (latestSlot.claimedBy.length >= Number(latestSlot.count || 0)) throw new Error("This position has just been filled"); const firstName = String(formData.get("firstName") || "").trim(); const lastName = String(formData.get("lastName") || "").trim(); const duplicate = findDuplicate(latestEvents, email, formattedPhone); if (duplicate) { hideLoading(); const matchType = duplicate.emailMatch && duplicate.phoneMatch ? "email address and phone number" : duplicate.emailMatch ? "email address" : "phone number"; const existingName = duplicate.person.publicName || publicName(duplicate.person.firstName, duplicate.person.lastName) || "another volunteer"; const proceed = window.confirm(`Duplicate warning: This ${matchType} is already used by ${existingName} for ${duplicate.event.title} – ${duplicate.slot.name}.\n\nDo you still want to add this signup?`); if (!proceed) { setStatus("Signup not added. The email or phone number is already in use.", "info"); return; } showLoading("Saving signup..."); } latestSlot.claimedBy.push({ id: uid(), firstName, lastName, email, phone: formattedPhone, notes: String(formData.get("notes") || "").trim(), publicName: publicName(firstName, lastName) }); await saveEvents(latestEvents); setStatus("Thanks for volunteering! Your signup was saved.", "ok"); render(await loadEvents()); } catch (error) { setStatus(error instanceof Error ? error.message : "Unable to save signup.", "error"); } finally { hideLoading(); }
+                    }); }
+                slotsWrap.appendChild(slotNode); }); container.appendChild(article); });
     }
-
-    (async () => {
-        try {
-            setStatus("Loading volunteer signups... This may take several minutes depending on your connection.", "info");
-            render(await loadEvents());
-            setStatus("", "ok");
-        } catch (error) {
-            setStatus("The volunteer database is currently unavailable. Please try again shortly.", "error");
-            container.innerHTML = '<p class="empty">Unable to load coaching positions.</p>';
-        }
-    })();
+    (async () => { try { setStatus("Loading volunteer signups... This may take several minutes depending on your connection.", "info"); render(await loadEvents()); setStatus("", "ok"); } catch (error) { setStatus("The volunteer database is currently unavailable. Please try again shortly.", "error"); container.innerHTML = '<p class="empty">Unable to load coaching positions.</p>'; } })();
 })();
