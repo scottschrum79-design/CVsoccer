@@ -158,7 +158,7 @@
 
     (async () => {
         try {
-            setStatus("Loading volunteer signups...", "info");
+            setStatus("Loading volunteer signups... This may take several minutes depending on your connection.", "info");
             render(await loadEvents());
             setStatus("", "ok");
         } catch (error) {
