@@ -11,96 +11,31 @@
         window.TEAMSIGNUPS_ASSET_VERSION = Date.now().toString();
         document.write('<link rel="stylesheet" href="styles.css?v=' + window.TEAMSIGNUPS_ASSET_VERSION + '" />');
         document.write('<link rel="stylesheet" href="filled-position.css?v=' + window.TEAMSIGNUPS_ASSET_VERSION + '" />');
+        document.write('<link rel="stylesheet" href="volunteer-countdown.css?v=' + window.TEAMSIGNUPS_ASSET_VERSION + '" />');
     </script>
 </head>
 <body data-page="signup">
     <header class="topbar">
         <h1>Coaching Signups</h1>
         <p>Conestoga Valley Soccer</p>
-        <nav class="topnav">
-            <a href="index.html" class="active">Signup Page</a>
-            <a href="create.html">Creator Page</a>
-        </nav>
+        <nav class="topnav"><a href="index.html" class="active">Signup Page</a><a href="create.html">Creator Page</a></nav>
     </header>
-
     <main class="layout single">
         <section class="card">
             <h2>Fall 2026 Season</h2>
-
-            <div class="info-block">
-                <h3 class="info-title">Season Overview</h3>
-                <ul class="info-list">
-                    <li><strong>Practices:</strong> Tuesday & Thursday, <strong>6:00–7:30 PM</strong> <span class="muted">(U8 / U6 typically end around 7:00)</span></li>
-                    <li><strong>Games:</strong> Saturdays within Lancaster County <span class="muted">(usually mornings, some afternoons)</span></li>
-                    <li><strong>U8 / U6 Games:</strong> Thursdays during normal practice time at <strong>home fields</strong></li>
-                    <li><strong>End of Season:</strong> Tournament usually held at <strong>Solanco</strong> <span class="muted">(does not apply to U8 / U6)</span></li>
-                </ul>
+            <div id="volunteer-countdown" class="volunteer-countdown" hidden aria-live="polite">
+                <p id="volunteer-countdown-title" class="volunteer-countdown-title">Loading volunteer countdown…</p>
+                <p id="volunteer-countdown-subtitle" class="volunteer-countdown-subtitle"></p>
+                <div class="volunteer-progress-track" role="progressbar" aria-label="Volunteer positions filled" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="volunteer-progress-bar" class="volunteer-progress-bar"></div></div>
+                <div id="volunteer-countdown-meta" class="volunteer-countdown-meta"></div>
             </div>
-
-            <div class="callout">
-                <p>
-                    Our recreational program depends on parent volunteers to form teams.
-                    <strong>Most of our coaches start with little or no soccer experience</strong>—the league can provide drills,
-                    practice ideas, and support to help you get started.
-                </p>
-                <p class="muted" style="margin-top: 8px;">
-                    Teams must be submitted and approved by the league by the dates below. If we do not have enough coaches, some players may be placed on a waiting list.
-                </p>
-            </div>
-
-            <p class="helper-text">Sign up below. (Scroll for full details.)</p>
-
-            <p id="sync-status" class="sync-status" data-type="info">Checking shared storage...</p>
-            <div id="public-event-list" class="stack"></div>
-
-            <details class="details-block">
-                <summary>More information (coaching roles & responsibilities)</summary>
-                <div class="details-inner">
-                    <h4>Head Coach Responsibilities</h4>
-                    <ul>
-                        <li>Parent communications about schedule changes, uniforms, and team updates</li>
-                        <li>Organizing and running practices</li>
-                        <li>Contacting the opposing coach prior to the game to confirm details</li>
-                        <li>Providing payment to the referee for home games</li>
-                        <li>Entering game scores online</li>
-                    </ul>
-
-                    <h4>Assistant Coach Responsibilities</h4>
-                    <ul>
-                        <li>Supporting the head coach during practices and games</li>
-                        <li>Fulfilling head coach duties when the head coach is not present</li>
-                        <li>Helping keep players on task and engaged</li>
-                    </ul>
-
-                    <h4>Schedule Details</h4>
-                    <ul>
-                        <li><strong>Practices:</strong> Tuesday & Thursday, 6:00–7:30 PM (U8 / U6 typically end at 7:00)</li>
-                        <li><strong>Games:</strong> Saturdays within Lancaster County (usually mornings, some afternoons)</li>
-                        <li><strong>U8 / U6 Games:</strong> Home games on Thursdays during normal practice time</li>
-                        <li><strong>End-of-season:</strong> Tournament at Solanco</li>
-                    </ul>
-                </div>
-            </details>
+            <div class="info-block"><h3 class="info-title">Season Overview</h3><ul class="info-list"><li><strong>Practices:</strong> Tuesday & Thursday, <strong>6:00–7:30 PM</strong> <span class="muted">(U8 / U6 typically end around 7:00)</span></li><li><strong>Games:</strong> Saturdays within Lancaster County <span class="muted">(usually mornings, some afternoons)</span></li><li><strong>U8 / U6 Games:</strong> Thursdays during normal practice time at <strong>home fields</strong></li><li><strong>End of Season:</strong> Tournament usually held at <strong>Solanco</strong> <span class="muted">(does not apply to U8 / U6)</span></li></ul></div>
+            <div class="callout"><p>Our recreational program depends on parent volunteers to form teams. <strong>Most of our coaches start with little or no soccer experience</strong>—the league can provide drills, practice ideas, and support to help you get started.</p><p class="muted" style="margin-top: 8px;">Teams must be submitted and approved by the league by the dates below. If we do not have enough coaches, some players may be placed on a waiting list.</p></div>
+            <p class="helper-text">Sign up below. (Scroll for full details.)</p><p id="sync-status" class="sync-status" data-type="info">Checking shared storage...</p><div id="public-event-list" class="stack"></div>
+            <details class="details-block"><summary>More information (coaching roles & responsibilities)</summary><div class="details-inner"><h4>Head Coach Responsibilities</h4><ul><li>Parent communications about schedule changes, uniforms, and team updates</li><li>Organizing and running practices</li><li>Contacting the opposing coach prior to the game to confirm details</li><li>Providing payment to the referee for home games</li><li>Entering game scores online</li></ul><h4>Assistant Coach Responsibilities</h4><ul><li>Supporting the head coach during practices and games</li><li>Fulfilling head coach duties when the head coach is not present</li><li>Helping keep players on task and engaged</li></ul><h4>Schedule Details</h4><ul><li><strong>Practices:</strong> Tuesday & Thursday, 6:00–7:30 PM (U8 / U6 typically end at 7:00)</li><li><strong>Games:</strong> Saturdays within Lancaster County (usually mornings, some afternoons)</li><li><strong>U8 / U6 Games:</strong> Home games on Thursdays during normal practice time</li><li><strong>End-of-season:</strong> Tournament at Solanco</li></ul></div></details>
         </section>
     </main>
-
-    <div id="loadingOverlay" class="loading-overlay hidden">
-        <div class="spinner"></div>
-        <div class="loading-text">Updating...</div>
-    </div>
-
-    <script>
-        (function () {
-            const version = window.TEAMSIGNUPS_ASSET_VERSION || Date.now().toString();
-            const configScript = document.createElement("script");
-            configScript.src = "config.js?v=" + encodeURIComponent(version);
-            configScript.onload = function () {
-                const signupScript = document.createElement("script");
-                signupScript.src = "public-signup.js?v=" + encodeURIComponent(version);
-                document.body.appendChild(signupScript);
-            };
-            document.body.appendChild(configScript);
-        })();
-    </script>
+    <div id="loadingOverlay" class="loading-overlay hidden"><div class="spinner"></div><div class="loading-text">Updating...</div></div>
+    <script>(function(){const version=window.TEAMSIGNUPS_ASSET_VERSION||Date.now().toString();const configScript=document.createElement("script");configScript.src="config.js?v="+encodeURIComponent(version);configScript.onload=function(){const signupScript=document.createElement("script");signupScript.src="public-signup.js?v="+encodeURIComponent(version);document.body.appendChild(signupScript);};document.body.appendChild(configScript);})();</script>
 </body>
 </html>
