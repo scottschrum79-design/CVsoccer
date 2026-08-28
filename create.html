@@ -7,132 +7,24 @@
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
     <title>TeamSignups | Creator</title>
-    <script>
-        window.TEAMSIGNUPS_ASSET_VERSION = Date.now().toString();
-        document.write('<link rel="stylesheet" href="styles.css?v=' + window.TEAMSIGNUPS_ASSET_VERSION + '" />');
-    </script>
+    <script>window.TEAMSIGNUPS_ASSET_VERSION=Date.now().toString();document.write('<link rel="stylesheet" href="styles.css?v='+window.TEAMSIGNUPS_ASSET_VERSION+'" />');</script>
 </head>
 <body data-page="create">
-    <header class="topbar">
-        <h1>TeamSignups</h1>
-        <p>Organizer / creator page</p>
-        <nav class="topnav">
-            <a href="index.html">Signup Page</a>
-            <a href="create.html" class="active">Creator Page</a>
-        </nav>
-    </header>
-
+    <header class="topbar"><h1>TeamSignups</h1><p>Organizer / creator page</p><nav class="topnav"><a href="index.html">Signup Page</a><a href="create.html" class="active">Creator Page</a><button id="creator-signout" type="button" hidden>Sign out</button></nav></header>
     <main id="creator-login" class="layout creator-login">
-        <section class="card">
-            <h2>Creator access</h2>
-            <form id="creator-auth-form" class="stack">
-                <label>
-                    Password
-                    <input id="creator-password" type="password" autocomplete="current-password" required />
-                </label>
-                <button type="submit">Unlock creator page</button>
-                <p id="creator-auth-status" class="creator-auth-status" data-type="error" hidden></p>
-            </form>
-        </section>
+        <section class="card"><h2>Creator access</h2><form id="creator-auth-form" class="stack"><label>Email<input id="creator-email" type="email" autocomplete="username" required /></label><label>Password<input id="creator-password" type="password" autocomplete="current-password" required /></label><button type="submit">Sign in</button><p id="creator-auth-status" class="creator-auth-status" data-type="error" hidden></p></form></section>
     </main>
-
     <main id="creator-content" class="layout" hidden>
-        <section class="card">
-            <h2>Create an event</h2>
-            <form id="event-form" class="stack">
-                <label>
-                    Event title
-                    <input id="event-title" required maxlength="80" placeholder="U? Fall 2026" />
-                </label>
-                <label>
-                    Description
-                    <textarea id="event-description" rows="3" maxlength="300" placeholder="What do volunteers need to know?"></textarea>
-                </label>
-                <label>
-                    Date
-                    <input id="event-date" type="date" required />
-                </label>
-
-                <fieldset>
-                    <legend>Slots</legend>
-                    <div id="slot-inputs" class="stack"></div>
-                    <button type="button" id="add-slot" class="secondary">+ Add slot</button>
-                </fieldset>
-
-                <button type="submit">Create event</button>
-            </form>
-        </section>
-
-        <section class="card">
-            <h2>Organizer view</h2>
-            <p class="helper-text">Full volunteer details are visible here only.</p>
-            <button type="button" id="download-report" class="secondary">Download coach report</button>
-            <p id="sync-status" class="sync-status" data-type="info">Checking shared storage...</p>
-            <div id="admin-event-list" class="stack"></div>
-        </section>
+        <section class="card"><h2>Create an event</h2><form id="event-form" class="stack"><label>Event title<input id="event-title" required maxlength="80" placeholder="U? Fall 2026" /></label><label>Description<textarea id="event-description" rows="3" maxlength="300" placeholder="What do volunteers need to know?"></textarea></label><label>Date<input id="event-date" type="date" required /></label><fieldset><legend>Slots</legend><div id="slot-inputs" class="stack"></div><button type="button" id="add-slot" class="secondary">+ Add slot</button></fieldset><button type="submit">Create event</button></form></section>
+        <section class="card"><h2>Organizer view</h2><p class="helper-text">Full volunteer details are visible here only.</p><button type="button" id="download-report" class="secondary">Download coach report</button><p id="sync-status" class="sync-status" data-type="info">Checking shared storage...</p><div id="admin-event-list" class="stack"></div></section>
     </main>
-
-    <template id="slot-template">
-        <div class="slot-row">
-            <input class="slot-label" placeholder="Slot name (e.g., Drinks)" required />
-            <input class="slot-count" type="number" min="1" max="20" value="1" required />
-            <button type="button" class="danger remove-slot" title="Remove slot">✕</button>
-        </div>
-    </template>
-
-    <div id="loadingOverlay" class="loading-overlay hidden">
-        <div class="spinner"></div>
-        <div class="loading-text">Updating...</div>
-    </div>
-
-    <dialog id="editEventDialog" class="modal">
-        <form method="dialog" id="editEventForm" class="modal-card">
-            <h3>Edit event</h3>
-
-            <label>
-                Title
-                <input name="title" required />
-            </label>
-
-            <label>
-                Date
-                <input name="date" type="date" required />
-            </label>
-
-            <label>
-                Description
-                <textarea name="description" rows="4"></textarea>
-            </label>
-            <hr />
-
-            <h4>Slots</h4>
-            <div id="editSlotsWrap" class="edit-slots"></div>
-
-            <button type="button" id="editAddSlotBtn" class="small">
-                + Add slot
-            </button>
-            <input type="hidden" name="eventId" />
-
-            <div class="modal-actions">
-                <button value="cancel" type="button" id="editCancelBtn">Cancel</button>
-                <button value="save" type="submit" class="primary" id="editSaveBtn">Save changes</button>
-            </div>
-        </form>
-    </dialog>
-
+    <template id="slot-template"><div class="slot-row"><input class="slot-label" placeholder="Slot name (e.g., Drinks)" required /><input class="slot-count" type="number" min="1" max="20" value="1" required /><button type="button" class="danger remove-slot" title="Remove slot">✕</button></div></template>
+    <div id="loadingOverlay" class="loading-overlay hidden"><div class="spinner"></div><div class="loading-text">Updating...</div></div>
+    <dialog id="editEventDialog" class="modal"><form method="dialog" id="editEventForm" class="modal-card"><h3>Edit event</h3><label>Title<input name="title" required /></label><label>Date<input name="date" type="date" required /></label><label>Description<textarea name="description" rows="4"></textarea></label><hr /><h4>Slots</h4><div id="editSlotsWrap" class="edit-slots"></div><button type="button" id="editAddSlotBtn" class="small">+ Add slot</button><input type="hidden" name="eventId" /><div class="modal-actions"><button value="cancel" type="button" id="editCancelBtn">Cancel</button><button value="save" type="submit" class="primary" id="editSaveBtn">Save changes</button></div></form></dialog>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.7/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
-        (function () {
-            const version = window.TEAMSIGNUPS_ASSET_VERSION || Date.now().toString();
-            const configScript = document.createElement("script");
-            configScript.src = "config.js?v=" + encodeURIComponent(version);
-            configScript.onload = function () {
-                const authScript = document.createElement("script");
-                authScript.src = "creator-auth.js?v=" + encodeURIComponent(version);
-                document.body.appendChild(authScript);
-            };
-            document.body.appendChild(configScript);
-        })();
+      (function(){const v=window.TEAMSIGNUPS_ASSET_VERSION||Date.now().toString();const c=document.createElement('script');c.src='config.js?v='+encodeURIComponent(v);c.onload=function(){const a=document.createElement('script');a.src='creator-auth.js?v='+encodeURIComponent(v);document.body.appendChild(a);};document.body.appendChild(c);})();
     </script>
 </body>
 </html>

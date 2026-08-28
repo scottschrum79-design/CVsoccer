@@ -2,7 +2,8 @@
 
 const storageConfig = window.TEAMSIGNUPS_CONFIG || {};
 const googleScriptUrl = typeof storageConfig.googleScriptUrl === "string" ? storageConfig.googleScriptUrl.trim() : "";
-const storageLabel = googleScriptUrl ? "Google Sheets" : "server storage";
+const useSupabase = storageConfig.storageProvider === "supabase";
+const storageLabel = useSupabase ? "Supabase" : (googleScriptUrl ? "Google Sheets" : "server storage");
 
 let spinnerStartTime = 0;
 const MIN_SPINNER_TIME = 3000; // 2 seconds
@@ -110,7 +111,7 @@ function showOfflineMessage(container) {
     if (!container) return;
     container.innerHTML = `
     <p class="empty">
-      Shared storage is offline. Connect Google Sheets or run the Node server so events/signups are saved for everyone.
+      Shared storage is offline. Please refresh the page and try again.
     </p>
   `;
 }
@@ -169,6 +170,28 @@ function setupStorageDiagnostics() {
 }
 
 async function loadEvents() {
+    if (useSupabase) {
+        const response = await supabaseRpc("get_admin_events", {});
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.message || "Unable to load events");
+        let events = Array.isArray(payload?.events) ? payload.events : [];
+
+        // One-time migration: after the first secure creator login, copy the
+        // existing test data from Google into the empty Supabase project.
+        if (!events.length && googleScriptUrl) {
+            const legacyResponse = await fetch(googleScriptUrl, { cache: "no-store" });
+            if (legacyResponse.ok) {
+                const legacyPayload = await legacyResponse.json();
+                const legacyEvents = Array.isArray(legacyPayload.events) ? legacyPayload.events : [];
+                if (legacyEvents.length) {
+                    await saveEvents(legacyEvents);
+                    events = legacyEvents;
+                }
+            }
+        }
+        return events;
+    }
+
     const response = await fetch(buildEventsEndpoint(), {
         cache: "no-store",
         method: "GET"
@@ -179,6 +202,24 @@ async function loadEvents() {
     const text = await response.text();
     const payload = JSON.parse(text);
     return Array.isArray(payload.events) ? payload.events : [];
+}
+
+function supabaseSession() {
+    try { return JSON.parse(sessionStorage.getItem("teamsignupsSupabaseSession") || "null"); }
+    catch { return null; }
+}
+
+function supabaseRpc(functionName, body) {
+    const session = supabaseSession();
+    return fetch(`${storageConfig.supabaseUrl}/rest/v1/rpc/${functionName}`, {
+        method: "POST",
+        headers: {
+            apikey: storageConfig.supabaseAnonKey,
+            Authorization: `Bearer ${session?.access_token || storageConfig.supabaseAnonKey}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+    });
 }
 
 
@@ -289,6 +330,15 @@ async function saveEditedEventFromDialog() {
 }
 
 async function saveEvents(events) {
+    if (useSupabase) {
+        const response = await supabaseRpc("save_admin_events", { p_events: events });
+        if (!response.ok) {
+            const payload = await response.json().catch(() => ({}));
+            throw new Error(payload.message || "Unable to save events");
+        }
+        return;
+    }
+
     const payload = JSON.stringify({ events });
 
     const request = googleScriptUrl
@@ -557,6 +607,8 @@ async function renderAdminPage() {
                 <td>${person.firstName} ${person.lastName}</td>
                 <td>${person.email}</td>
                 <td>${person.phone}</td>
+                <td>${person.shirtSize || "-"}</td>
+                <td>${person.handbookAccess || "N"}</td>
                 <td>${person.notes || "-"}</td>
                 <td>
                   <button type="button"
@@ -583,6 +635,8 @@ async function renderAdminPage() {
                         <th>Full name</th>
                         <th>Email</th>
                         <th>Phone</th>
+                        <th>Shirt size</th>
+                        <th>Soccer Handbook</th>
                         <th>Notes</th>
                         <th>Action</th>
                       </tr>

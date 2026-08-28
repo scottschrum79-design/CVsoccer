@@ -21,6 +21,8 @@ function getReportRows(events) {
                     lastName: person.lastName || "",
                     email: person.email || "",
                     phone: person.phone || "",
+                    shirtSize: person.shirtSize || "",
+                    handbookAccess: person.handbookAccess || "N",
                     notes: person.notes || ""
                 });
             });
@@ -31,6 +33,10 @@ function getReportRows(events) {
 }
 
 function buildExcelReport(rows) {
+    if (typeof XLSX === "undefined") {
+        throw new Error("Excel report library did not load");
+    }
+
     const headers = [
         "Event",
         "Date",
@@ -40,53 +46,52 @@ function buildExcelReport(rows) {
         "Last Name",
         "Email",
         "Phone",
+        "Shirt Size",
+        "Soccer Handbook Access",
         "Notes"
     ];
 
-    const headerHtml = headers.map((header) => `<th>${escapeReportCell(header)}</th>`).join("");
-    const rowHtml = rows
-        .map((row) => `
-            <tr>
-                <td>${escapeReportCell(row.eventTitle)}</td>
-                <td>${escapeReportCell(row.eventDate)}</td>
-                <td>${escapeReportCell(row.role)}</td>
-                <td>${escapeReportCell(row.publicName)}</td>
-                <td>${escapeReportCell(row.firstName)}</td>
-                <td>${escapeReportCell(row.lastName)}</td>
-                <td>${escapeReportCell(row.email)}</td>
-                <td>${escapeReportCell(row.phone)}</td>
-                <td>${escapeReportCell(row.notes)}</td>
-            </tr>
-        `)
-        .join("");
+    const data = rows.map((row) => [
+        row.eventTitle,
+        row.eventDate,
+        row.role,
+        row.publicName,
+        row.firstName,
+        row.lastName,
+        row.email,
+        row.phone,
+        row.shirtSize,
+        row.handbookAccess,
+        row.notes
+    ]);
 
-    return `
-        <html>
-            <head>
-                <meta charset="UTF-8" />
-            </head>
-            <body>
-                <table border="1">
-                    <thead><tr>${headerHtml}</tr></thead>
-                    <tbody>${rowHtml}</tbody>
-                </table>
-            </body>
-        </html>
-    `;
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    worksheet["!cols"] = [
+        { wch: 24 },
+        { wch: 12 },
+        { wch: 20 },
+        { wch: 20 },
+        { wch: 16 },
+        { wch: 18 },
+        { wch: 30 },
+        { wch: 18 },
+        { wch: 12 },
+        { wch: 24 },
+        { wch: 40 }
+    ];
+    worksheet["!autofilter"] = { ref: worksheet["!ref"] };
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Coaches");
+    return workbook;
 }
 
-function downloadReport(content) {
+function downloadReport(workbook) {
     const today = new Date().toISOString().slice(0, 10);
-    const blob = new Blob([content], { type: "application/vnd.ms-excel;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-
-    link.href = url;
-    link.download = `cv-soccer-coach-report-${today}.xls`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+    XLSX.writeFile(workbook, `cv-soccer-coach-report-${today}.xlsx`, {
+        bookType: "xlsx",
+        compression: true
+    });
 }
 
 function initReportDownload() {
